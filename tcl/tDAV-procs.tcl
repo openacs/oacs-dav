@@ -1135,7 +1135,7 @@ proc tdav::webdav_lock {} {
 	tdav::respond [list $ret_code]
     } else {
 	set depth [tdav::conn depth]
-	set timeout [tdav::conn timeout]
+	set timeout [tdav::conn lock_timeout]
 	if {[string equal "" $timeout]} {
 	    #probably make this a paramter?
 	    set timeout 180
