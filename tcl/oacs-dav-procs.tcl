@@ -92,6 +92,13 @@ ad_proc oacs_dav::authorize { args } {
     the URI
 } {
     ns_log debug "\nOACS-DAV running oacs_dav::authorize"
+
+    # Restrict to SSL if required
+    if { [security::RestrictLoginToSSLP]  && ![security::secure_conn_p] } {
+	ns_returnunauthorized
+	return filter_return
+    }
+
     # set common data for all requests 
     oacs_dav::conn_setup
    
@@ -287,7 +294,8 @@ ad_proc -public oacs_dav::conn_setup {} {
     Setup oacs_dav::conn, authenticate user
 } {
     ad_conn -reset
-    set uri [ns_conn url]
+    set uri [ns_urldecode [ns_conn url]]
+
     ns_log debug "\nconn_setp uri \"$uri\" "
     set dav_url_regexp "^[oacs_dav::uri_prefix]"
     regsub $dav_url_regexp $uri {} uri
@@ -716,7 +724,7 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
     	lappend encoded_uri [oacs_dav::urlencode $fragment]
     }   
 
-    set folder_uri "[ad_url][join $encoded_uri "/"]"
+    set folder_uri "[ad_conn location][join $encoded_uri "/"]"
     
     # this is wacky, but MS Web Folders usually (but not always)
     # requests a collection without a trailing slash
