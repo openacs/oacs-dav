@@ -164,7 +164,7 @@ ad_proc oacs_dav::authorize { args } {
                                       -privilege "create"] ]
 	}
 	propfind {
-	    if {!$user_id} {
+	    if {[empty_string_p $user_id]} {
 		ns_returnunauthorized
 	    } else {
 		set authorized_p [permission::permission_p \
