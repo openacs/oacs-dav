@@ -437,6 +437,17 @@ ad_proc oacs_dav::impl::content_folder::get {} {
     return [list 409]
 }
 
+ad_proc oacs_dav::impl::content_folder::head {} {
+    HEAD DAV method for content folders
+    can't get a folder
+} {
+
+    # I am not sure what the behavior is, but the client
+    # should be smart enough to do a propfind on a folder/collection
+    
+    return [list 409]
+}
+
 ad_proc oacs_dav::impl::content_folder::mkcol {} {
     MKCOL DAV method for generic content folder
     @author Dave Bauer

@@ -111,6 +111,12 @@ ad_proc -private oacs_dav::install::create_dav_sc {
 		    response:string
 		}
 	    }
+	    head {
+		description "DAV HEAD Method"
+		output {
+		    response:string
+		}
+	    }
         }
     }
 
@@ -157,6 +163,7 @@ ad_proc -private oacs_dav::install::register_implementation {
         name "content_revision"
         aliases {
             get oacs_dav::impl::content_revision::get
+            head oacs_dav::impl::content_revision::head	    
             put oacs_dav::impl::content_revision::put
 	    propfind oacs_dav::impl::content_revision::propfind
 	    delete oacs_dav::impl::content_revision::delete
@@ -177,6 +184,7 @@ ad_proc -private oacs_dav::install::register_implementation {
         name "content_folder"
         aliases {
             get oacs_dav::impl::content_folder::get
+            head oacs_dav::impl::content_revision::head
             put oacs_dav::impl::content_folder::put
 	    propfind oacs_dav::impl::content_folder::propfind
 	    delete oacs_dav::impl::content_folder::delete
