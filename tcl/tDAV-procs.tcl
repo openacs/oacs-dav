@@ -295,7 +295,8 @@ proc tdav::dbm_read_list {uri} {
 
 proc tdav::read_lock {uri} {
     set f [open [tdav::get_lock_file $uri] {CREAT RDONLY}]
-
+    file start $[tdav::get_lock_file $uri] file_info
+    set t $file_info(mtime)
     set s [read $f]
     set e "list ${s}"
     set l [eval $e]
@@ -329,6 +330,22 @@ proc tdav::dbm_write_array {uri arr} {
     # throw errors
 }
 
+
+# tdav::check_lock_timeout
+#
+#     check if lock has timed out
+#
+# Arguments:
+#     uri URI of request
+#
+# Results:
+
+proc tdav::check_lock_timeout { uri } {
+
+    
+
+}
+
 # tdav::check_lock
 #
 #     Compare existing lock to lock token provided
@@ -351,16 +368,21 @@ proc tdav::check_lock {uri} {
     regsub {^/} $uri {} uri
     # if lock exists, work.  if not, just return.
     if {[file exists [tdav::get_lock_file $uri]]} {
+       set lockinfo [tdav::read_lock $uri]
 
 	set hdr [ns_set iget [ns_conn headers] If]
+
+	
 	# the If header exists, work, otherwise 423
+	
 	if {[info exists hdr] && [string length $hdr]} {
 	    set token ""
 	    # add ? in the token re in case there is a conditional () 
 	    # in the header
 	    regexp {(<http://[^/]+([^>]+)>\s+)?\(<([^>]+)>\)} $hdr nil maybe hdr_uri token
-	    set ftk [lindex [tdav::read_lock $uri] 3]
-
+	    
+	    set ftk [lindex $lockinfo 3]
+	    
 	    if {![info exists token] || ![string equal $token $ftk]} {
                 ns_log Debug "tdav::check_lock: token mismatch $ftk expected hdr: $hdr token: $token"
 		ns_return 423 {text/plain} {}
@@ -1058,7 +1080,9 @@ proc tdav::filter_webdav_lock {args} {
 	set owner ""
     }
     set depth [ns_set iget [ns_conn headers] Depth]
-    if ![string length $depth] {
+    set timeout [ns_set iget [ns_conn headers] Timeout]
+    tdav::conn -set lock_timeout $timeout
+     if {![string length $depth]} {
 	set depth 0
     }
     tdav::conn -set depth $depth
@@ -1071,34 +1095,47 @@ proc tdav::filter_webdav_lock {args} {
     return filter_ok
 }
 
-proc tdav::set_lock {uri depth type scope owner} {
+proc tdav::set_lock {uri depth type scope owner timeout} {
 
     set token "opaquelocktoken:[ns_rand 2147483647]"
-    set lock [list $type $scope $owner $token]
+    set lock [list $type $scope $owner $token $timeout]
     tdav::write_lock $uri $lock
     return $token
+
 }
 
 proc tdav::webdav_lock {} {
     set scope [tdav::conn lock_scope]
     set type [tdav::conn lock_type]
     set owner [tdav::conn lock_owner]
-    
     set uri [ns_conn url]
     regsub {^/} $uri {} uri
     set entry [file join [ns_info pageroot] $uri]
     set filename [lindex [file split $entry] end]
     set existing_lock_token [tdav::conn lock_token]
-    if {![file exists $entry]} {
-	set ret_code 404
-    } elseif {![string equal "unlocked" [tdav::check_lock $uri]]} {
+#    if {![file exists $entry]} {
+#	set ret_code 404
+#    } else
+    if {![string equal "unlocked" [tdav::check_lock $uri]]} {
 	set ret_code 423
 	tdav::respond [list $ret_code]
     } else {
 	set depth [tdav::conn depth]
-	set token [tdav::set_lock $uri $depth $type $scope $owner]
+	set timeout [tdav::conn timeout]
+	if {[string equal "" $timeout]} {
+	    #probably make this a paramter?
+	    set timeout 180
+	}
+	if {![empty_string_p $existing_lock_token]} {
+	    
+	    set old_lock [tdav::read_lock $uri]
+	    set new_lock [list [lindex $old_lock 0] [lindex $old_lock 1] [lindex $old_lock 2] [lindex $old_lock 3] $timeout]
+	    tdav::write_lock $uri $new_lock
+	} else {
+	    set token [tdav::set_lock $uri $depth $type $scope $owner]
+	}
 	set ret_code 200
-	tdav::respond [list $ret_code [list depth $depth token $token timeout "" owner $owner scope $scope type $type]]
+	tdav::respond [list $ret_code [list depth $depth token $token timeout $timeout owner $owner scope $scope type $type]]
     }
 }
 
@@ -1143,7 +1180,7 @@ proc tdav::filter_stuff_nsperm {args} {
 }
 
 
-proc tdav::return_unauthorized { {realm "tbl"} } {
+proc tdav::return_unauthorized { {realm ""} } {
     ns_set put [ns_conn outputheaders] "WWW-Authenticate" [subst {Basic realm="$realm"}]
     ns_return 401 {text/plain} "Unauthorized\n"
 }
@@ -1167,6 +1204,7 @@ proc tdav::respond { response } {
 	    set response_body [encoding convertto utf-8 $response_body]
 	}
     }
+    ns_log debug "\n ----- tdav litmus headers ----- \n [ns_set iget [ns_conn headers] X-Litmus] \n -----\n"
     ns_log debug "\n  ----- tdav::response response_body ----- \n $response_body \n ----- end ----- \n"
     ns_return $response_code $mime_type $response_body
 }
@@ -1215,24 +1253,9 @@ proc tdav::respond::unlock { response } {
 
     return [list $body]
 }
-proc tdav::respond::put { response } {
-    set body ""
-    set mime_type text/plain
-    if {[string equal "201" [lindex $response 0]]} {
-	set body [subst {<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
-	    <HTML><HEAD>
-	    <TITLE>201 Created</TITLE>
-	    </HEAD><BODY>
-	    <H1>Created</H1>
-	    Resource [ns_conn url] has been created.
-	    <P><HR>
-	    <ADDRESS>AOLserver/3.0 at [ns_info hostname] Port [if {[ns_conn port] == 0} {return 80} else {return [ns_conn port]}]</ADDRESS>
-	    </BODY></HTML>
-	}]
-	set mime_type text/html
-    }
 
-    return  [list $body $mime_type]
+proc tdav::respond::put { response } {
+    return  $response
 }
 
 proc tdav::respond::proppatch { response } {
@@ -1271,21 +1294,22 @@ proc tdav::respond::mkcol { response } {
     set body ""
     switch -- [lindex $response 0] {
 	415 {
-	    set body "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">"
+#	    set body "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">"
 	}
 	490 {
-	    set body "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">"
+#	    set body "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">"
 	}
 	201 {
-	    set body "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">
-<html><head>
-<title>201 Created</title>
-</head><body>
-<h1>Created</h1>
-<p>Collection [ns_conn url] has been created.</p>
-<hr />
-<address></address>
-	</body></html>"
+# 	    set body "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">
+# <html><head>
+# <title>201 Created</title>
+# </head><body>
+# <h1>Created</h1>
+# <p>Collection [ns_conn url] has been created.</p>
+# <hr />
+# <address></address>
+# 	</body></html>"
+
 	}
 	405 {
 	    	set body "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">
@@ -1304,12 +1328,6 @@ proc tdav::respond::propfind { response } {
     # response lindex 1
     # we don't have to check the tdav fs props or lock properties
     # they should already be there
-    
-#    dom createNodeCmd elementNode node::response
-#    dom createNodeCmd elementNode node::href
-#    dom createNodeCmd elementNode node::propstat
-#    dom createNodeCmd elementNode node::prop
-#    dom createNodeCmd elementNode tdav::text
 
     set d [dom createDocumentNS "DAV:" "D:multistatus"]
     set n [$d documentElement]
@@ -1368,20 +1386,24 @@ proc tdav::respond::propfind { response } {
 	    $prop appendChild $pnode
 
 	}
+
+	set supportedlock [$d createElement D:supportedlock]	
 	
-#	set lockentry [$d createElement D:lockentry]
-#	set lockscope [$d createElement D:lockscope]
-#	set exclusive [$d createElement D:exclusive]
-#	set locktype [$d createElement D:locktype]
-#	set write_type [$d createElement D:write]
-#	
-#        $locktype appendChild $write_type
-#	$lockscope appendChild $exclusive
-#
-#	$lockentry appendChild $lockscope
-#	$lockentry appendChild $locktype
-#
-#	$prop appendChild $lockentry
+	set lockentry [$d createElement D:lockentry]
+	set lockscope [$d createElement D:lockscope]
+	set exclusive [$d createElement D:exclusive]
+	set locktype [$d createElement D:locktype]
+	set write_type [$d createElement D:write]
+	
+	$supportedlock appendChild $lockentry
+	
+        $locktype appendChild $write_type
+	$lockscope appendChild $exclusive
+
+	$lockentry appendChild $lockscope
+	$lockentry appendChild $locktype
+
+	$prop appendChild $supportedlock
 
 	$propstat appendChild $prop	
 
@@ -1390,20 +1412,6 @@ proc tdav::respond::propfind { response } {
 
 	$status appendChild $status_text
 	$propstat appendChild $status
-
-	# i'll have to learn more about what this lock entry is	    
-#	append mst_body {        <D:lockentry>
-#	    <D:lockscope><D:exclusive/></D:lockscope>
-#	    <D:locktype><D:write/></D:locktype>
-#	    </D:lockentry>
-#	    <D:lockentry>
-#	    <D:lockscope><D:shared/></D:lockscope>
-#	    <D:locktype><D:write/></D:locktype>
-#	    </D:lockentry>
-#	    </D:prop>
-#	    <D:status>HTTP/1.1 200 OK</D:status>
-#	    </D:propstat>
-#	    </D:response>}
 
 
     }

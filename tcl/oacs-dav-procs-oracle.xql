@@ -51,11 +51,12 @@
       select
 	ci.item_id,
 	ci.name,
-	content_item__get_path(ci.item_id,:folder_id) as item_uri,
-	coalesce(cr.mime_type,'*/*') as mime_type,
-	cr.content_length,
-	to_char(o.creation_date, 'YYYY-MM-DD"T"HH:MM:SS.MS"Z"') as creation_date,
-	to_char(o.last_modified, 'Dy, DD Mon YYYY HH:MM:SS TZ') as last_modified
+	content_item.get_path(ci.item_id,:folder_id) as item_uri,
+	nvl(cr.mime_type,'*/*') as mime_type,
+	nvl(cr.content_length,0) as content_length,
+	to_char(o.creation_date, 'YYYY-MM-DD"T"HH:MI:SS."000"') as creation_date,
+	to_char(o.last_modified, 'Dy, Dd Mon YYYY HH:MI:SS "${os_time_zone}"') as last_modified
+
       from cr_items ci,
       acs_objects o,
       cr_revisions cr
@@ -88,7 +89,7 @@
   <fullquery name="oacs_dav::impl::content_folder::copy.copy_folder">
     <querytext>
 	begin
-	      :1 := content_folder.copy (
+	      content_folder.copy (
 	              folder_id => :copy_folder_id,
 	              target_folder_id => :new_parent_folder_id,
 	              creation_user => :user_id,

@@ -1,5 +1,5 @@
 # /packages/oacs-dav/tcl/oacs-dav-procs.tcl 
-ns_log notice "Loading oacs-dav-procs.tcl"
+ns_log debug "\nLoading oacs-dav-procs.tcl"
 ad_library {
     
     Support for tDAV tcl webDAV implemenation
@@ -11,6 +11,29 @@ ad_library {
 }
 
 namespace eval oacs_dav {}
+
+ad_proc oacs_dav::urlencode { string } {
+    urlencode allowing characters according to rfc 1738
+    http://www.w3.org/Addressing/rfc1738.txt
+
+    "Thus, only alphanumerics, the special characters "$-_.+!*'(),", and
+    reserved characters used for their reserved purposes may be used
+    unencoded within a URL."
+    
+    ignore + used to encode spaces in query strings
+    
+    This is mainly to support MS Web Folders which do not follow the
+    spec which states that any character may be urlencoded. Web Folders
+    rejects the entire collection as invalid if a filename contains
+    one of these characters encoded.
+
+} {
+    set encoded_string [ns_urlencode $string]
+    set encoded_string [string map -nocase \
+			    {%2d - %5f _ %24 $ %2e . %21 ! %28 ( %29 ) %27 ' %2c ,} $encoded_string]
+     
+   return $encoded_string
+}
 
 ad_proc oacs_dav::folder_enabled {
     -folder_id
@@ -31,16 +54,16 @@ ad_proc oacs_dav::set_user_id {} {
     # should be something like "Basic 29234k3j49a"
     set a [ns_set get [ns_conn headers] Authorization]
     if {[string length $a]} {
-	ns_log notice "TDAV auth_check authentication info $a"
+	ns_log debug "\nTDAV auth_check authentication info $a"
 	# get the second bit, the base64 encoded bit
 	set up [lindex [split $a " "] 1]
 	# after decoding, it should be user:password; get the username
 	set user [lindex [split [ns_uudecode $up] ":"] 0]
 	set password [lindex [split [ns_uudecode $up] ":"] 1]
-	ns_log notice "ACS VERSION [ad_acs_version]"
+	ns_log debug "\nACS VERSION [ad_acs_version]"
 	switch -glob -- [ad_acs_version] {
 	    "5.0*" {
-		ns_log debug "TDAV 5.0 authentication"
+		ns_log debug "\nTDAV 5.0 authentication"
 		array set auth [auth::authenticate \
 				    -username $user \
 				    -password $password]
@@ -49,19 +72,19 @@ ad_proc oacs_dav::set_user_id {} {
 					-email $user \
 					-password $password]
 		    if {![string equal $auth(auth_status) "ok"]} {
-			ns_log debug "TDAV 5.0 auth status $auth(auth_status)"
+			ns_log debug "\nTDAV 5.0 auth status $auth(auth_status)"
 			ns_returnunauthorized
 			return 0
 		    }
 
 		}
-		ns_log notice "TDAV: auth_check openacs 5.0 user_id= $auth(user_id)"
+		ns_log debug "\nTDAV: auth_check openacs 5.0 user_id= $auth(user_id)"
 		ad_conn -set user_id $auth(user_id)
 		return
 	    }
 	    default {
 		# for 4.6:
-		ns_log debug "TDAV 4.6 authentication"		    
+		ns_log debug "\nTDAV 4.6 authentication"		    
 		set email [string tolower $user]
 		if {[db_0or1row user_login_user_id_from_email {
 		    select user_id, member_state, email_verified_p
@@ -69,14 +92,14 @@ ad_proc oacs_dav::set_user_id {} {
 		    where email = :email}] } {
 		    
 		    if {[ad_check_password $user_id $password]} {
-			ns_log notice "TDAV setting user_id $user_id"
+			ns_log debug "\nTDAV setting user_id $user_id"
 			ad_conn -set user_id $user_id
 			ad_conn -set untrusted_user_id $user_id
 			return
 		    }
 
 		}
-		ns_log notice "TDAV: openacs user/password not matched"
+		ns_log debug "\nTDAV: openacs user/password not matched"
 		ns_returnunauthorized
 		return
 
@@ -93,7 +116,7 @@ ad_proc oacs_dav::authorize { args } {
     check is user_id has permission to perform the WebDAV method on
     the URI
 } {
-    ns_log notice "OACS-DAV running oacs_dav::authorize"
+    ns_log debug "\nOACS-DAV running oacs_dav::authorize"
     # set common data for all requests 
     oacs_dav::conn_setup
    
@@ -101,12 +124,12 @@ ad_proc oacs_dav::authorize { args } {
     set item_id [oacs_dav::conn item_id]
     set user_id [oacs_dav::conn user_id]
     set folder_id [oacs_dav::conn folder_id]
-    ns_log notice "OACS-DAV oacs_dav::authorize user_id $user_id method $method item_id $item_id" 
+    ns_log debug "\nOACS-DAV oacs_dav::authorize user_id $user_id method $method item_id $item_id" 
     set authorized_p 0
     # if item doesn't exist don't bother checking....
     if {[empty_string_p $item_id]} {
-	if {![string equal $method "put"] && ![string equal $method "mkcol"]} {
-	    ns_log notice "oacs_dav::authorize file not found!!!!!"
+	if {![string equal "put" $method] && ![string equal "mkcol" $method] && ![string equal "lock" $method]} {
+	    ns_log debug "\noacs_dav::authorize file not found"
 	    ns_return 404 text/plain "File Not Found"
 	    return filter_return
 	}
@@ -125,7 +148,21 @@ ad_proc oacs_dav::authorize { args } {
 				  -party_id $user_id \
 				  -privilege "delete"]
 	}
-	lock -
+	lock {
+	    if {![empty_string_p $item_id]} {
+		set authorized_p [permission::permission_p \
+			  -object_id $item_id \
+			  -party_id $user_id \
+			  -privilege "write"]
+	    } else {
+		# if item does not exist yet check for create on
+		# the collection and create a null lock
+		set authorized_p [permission::permission_p \
+				  -object_id $folder_id \
+				  -party_id $user_id \
+				  -privilege "create"]
+	    }
+	}
 	unlock -
 	proppatch {
 	    set authorized_p [permission::permission_p \
@@ -240,7 +277,7 @@ ad_proc -public oacs_dav::item_parent_folder_id {
     @param uri
     @returns parent_folder_id or empty string if folder does not exist
 } {
-    ns_log notice "OACS-DAV:item parent folder_id uri $uri"
+
     array set sn [oacs_dav::request_site_node $uri]
     set node_id $sn(node_id)
     set root_folder_id [oacs_dav::request_folder_id $node_id]
@@ -250,7 +287,7 @@ ad_proc -public oacs_dav::item_parent_folder_id {
     } else {
 	set parent_name "/"
     }
-    ns_log debug "parent_folder_id urlv $urlv parent_name $parent_name uri $uri"
+    ns_log debug "\nparent_folder_id urlv $urlv parent_name $parent_name uri $uri"
     if {[string equal [string trimright $parent_name "/"] [string trimright $sn(url) "/"]]} {
 	# content_item__get_id can't resolve "/"
 	# because it strips the leading and trailing /
@@ -276,12 +313,17 @@ ad_proc -public oacs_dav::conn_setup {} {
 } {
     ad_conn -reset
     set uri [ns_conn url]
+    ns_log debug "\nconn_setp uri \"$uri\" "
     set dav_url_regexp "^[oacs_dav::uri_prefix]"
     regsub $dav_url_regexp $uri {} uri
+    if {[empty_string_p $uri]} {
+	set uri "/"
+    }
     oacs_dav::conn -set uri $uri
     set method [ns_conn method]
+    ns_log debug "\noacs_dav::conn_setup: uri \"$uri\" method $method"
     oacs_dav::set_user_id
-    ns_log debug "oacs_dav::conn_setup: uri $uri method $method user_id [oacs_dav::conn user_id]"
+    ns_log debug "\noacs_dav::conn_setup: uri \"$uri\" method $method user_id [oacs_dav::conn user_id]"
     array set sn [oacs_dav::request_site_node $uri]
     set node_id [oacs_dav::conn -set node_id $sn(node_id)]
     set package_id [oacs_dav::conn -set package_id $sn(package_id)]
@@ -292,7 +334,7 @@ ad_proc -public oacs_dav::conn_setup {} {
         set destination [oacs_dav::conn -set destination [ns_urldecode [ns_set iget [ns_conn headers] Destination]]]
     }
     regsub {http://[^/]+/} $destination {/} dest
-    ns_log debug "oacs_dav::conn_setup destination = $dest"
+    ns_log debug "\noacs_dav::conn_setup destination = $dest"
     regsub $dav_url_regexp $dest {} dest
     oacs_dav::conn -set destination $dest
     if {![empty_string_p $dest]} {
@@ -308,7 +350,7 @@ ad_proc -public oacs_dav::conn_setup {} {
     } else {
 	set parent_url "/"
     }
-    ns_log debug "oacs_dav::conn_setup: handle request parent_url $parent_url length urlv [llength $urlv] urlv $urlv"
+    ns_log debug "\noacs_dav::conn_setup: handle request parent_url $parent_url length urlv [llength $urlv] urlv $urlv"
     set item_name [lindex $urlv end]
     if {[empty_string_p $item_name]} {
 	# for propget etc we need the name of the folder
@@ -316,16 +358,16 @@ ad_proc -public oacs_dav::conn_setup {} {
 	set item_name [lindex [split [string trimleft $parent_url "/"] "/"] end]
     }
     oacs_dav::conn -set item_name $item_name
-        ns_log debug "oacs_dav::conn_setup: handle request parent_url $parent_url length urlv [llength $urlv] urlv $urlv item_name $item_name" 
+        ns_log debug "\noacs_dav::conn_setup: handle request parent_url $parent_url length urlv [llength $urlv] urlv $urlv item_name $item_name" 
     set parent_id [oacs_dav::item_parent_folder_id $uri]
 
     set item_id [oacs_dav::conn -set item_id [db_exec_plsql get_item_id ""]]
-    ns_log debug "oacs_dav::conn_setup: uri $uri parent_url $parent_url folder_id $folder_id"
+    ns_log debug "\noacs_dav::conn_setup: uri $uri parent_url $parent_url folder_id $folder_id"
     if {[string equal [string trimright $uri "/"] [string trimright $sn(url) "/"]]} {
 	set item_id [oacs_dav::conn -set item_id $folder_id]
     }
 
-    ns_log debug "oacs_dav::conn_setup: item_id $item_id"
+    ns_log debug "\noacs_dav::conn_setup: item_id $item_id"
 }
 
 ad_proc -public oacs_dav::handle_request { uri method args } {
@@ -334,16 +376,16 @@ ad_proc -public oacs_dav::handle_request { uri method args } {
 
     set uri [ns_conn url]
     set method [string tolower [ns_conn method]]
-    ns_log debug "oacs_dav::handle_request method=$method uri=$uri"    
+    ns_log debug "\noacs_dav::handle_request method=$method uri=$uri"    
     set item_id [oacs_dav::conn item_id]
     set folder_id [oacs_dav::conn folder_id]
     set package_id [oacs_dav::conn package_id]
     set node_id [oacs_dav::conn node_id]
     set package_key [apm_package_key_from_id $package_id]    
 
-    ns_log debug "oacs_dav::handle_request item_id is $item_id"
+    ns_log debug "\noacs_dav::handle_request item_id is $item_id"
     if {[empty_string_p $item_id]} {
-	ns_log debug "oacs_dav::handle_request item_id is empty"
+	ns_log debug "\noacs_dav::handle_request item_id is empty"
 	# set this to null if nothing exists, only valid on PUT or MKCOL
 	# to create a new item, otherwise we bail
 	# item for URI does not exist
@@ -359,10 +401,14 @@ ad_proc -public oacs_dav::handle_request { uri method args } {
 			set content_type [acs_sc_call dav_put_type get_type "" $package_key]
 		    }
 
+		} 
+		lock {
+		    # asssume resource on NULL LOCK
+		    set content_type "content_revision"
 		}
 		default {
 		    # return a 404 or other error
-		    ns_log notice "oacs_dav::handle_request: 404 handle request Item not found method $method URI $uri"
+		    ns_log debug "\noacs_dav::handle_request: 404 handle request Item not found method $method URI $uri"
 		    ns_return 404 text/html "File Not Found"
 		    return
 		}
@@ -393,13 +439,13 @@ ad_proc -public oacs_dav::handle_request { uri method args } {
 
     # probably should catch this
 
-    ns_log debug "oacs_dav::handle_request method $method uri $uri item_id $item_id folder_id $folder_id package_id $package_id node_id $node_id content_type $content_type args $args"
+    ns_log debug "\noacs_dav::handle_request method $method uri $uri item_id $item_id folder_id $folder_id package_id $package_id node_id $node_id content_type $content_type args $args"
 
     set response [acs_sc_call dav $method "" $content_type]
 
     # here the sc impl might return us some data,
     # then we would probably have to send that to tDAV for processing
-    ns_log debug "DAV: response is \"$response\""
+    ns_log debug "\nDAV: response is \"$response\""
 
     if {![string equal -nocase "get" $method]
 	&& ![string equal -nocase "head" $method]} {
@@ -414,10 +460,7 @@ ad_proc -public oacs_dav::request_site_node { uri } {
     # if you want to serve up DAV content at a different URL
     # you still need to mount a package in the site-map
     # might change later when we figure out how to actually use it 
-    ns_log notice "OACS-DAV!! uri $uri"
-#    if {[empty_string_p $uri]} {
-#	set uri [ns_conn url]
-#    }
+    ns_log debug "\nOACS-DAV!! uri $uri"
     set sn [site_node::get -url $uri]
     return $sn
 }
@@ -508,14 +551,14 @@ ad_proc oacs_dav::impl::content_folder::copy {} {
     # check that destination exists and is WebDAV enabled
     # when depth is 0 copy just the folder
     # when depth is 1 copy contents
-ns_log notice "DAV Folder Copy dest $target_uri parent_id $new_parent_folder_id"
+    ns_log debug "\nDAV Folder Copy dest $target_uri parent_id $new_parent_folder_id"
     if {[empty_string_p $new_parent_folder_id]} {
 	return [list 409]
     }
 
     set dest_item_id [db_string get_dest_id "" -default ""]
     if {![empty_string_p $dest_item_id]} {
-	ns_log notice "DAV Folder Copy Folder Exists item_id $dest_item_id overwrite $overwrite"
+	ns_log debug "\n ----- \n DAV Folder Copy Folder Exists item_id $dest_item_id overwrite $overwrite \n ----- \n"
 	if {![string equal -nocase $overwrite "T"]} {
 	    return [list 412]
 	} elseif {![permission::permission_p \
@@ -530,14 +573,17 @@ ns_log notice "DAV Folder Copy dest $target_uri parent_id $new_parent_folder_id"
 	    return [list 423]
 	}
         db_exec_plsql delete_for_copy ""
+	set response [list 204]
+	ns_log debug "\n ----- \n  CONTENT_FOLDER::COPY OVERWRITING RETURNING 204  \n ----- \n"
+    } else {
+	set response [list 201]
     }
-
     db_transaction {
 	db_exec_plsql copy_folder ""
     } on_error {
 	return [list 500]
     }
-    set response [list 201]
+
     tdav::copy_props $uri $target_uri
     return $response
 }
@@ -564,9 +610,9 @@ ad_proc oacs_dav::impl::content_folder::move {} {
     }
 
     set dest_item_id [db_string get_dest_id "" -default ""]
-    ns_log debug "@DAV@@ folder move new_name $new_name dest_id $dest_item_id new_folder_id $new_parent_folder_id" 
+    ns_log debug "\n@DAV@@ folder move new_name $new_name dest_id $dest_item_id new_folder_id $new_parent_folder_id \n" 
     if {![empty_string_p $dest_item_id]} {
-	ns_log notice "DAV Folder Move Folder Exists item_id $dest_item_id overwrite $overwrite"
+
 	if {![string equal -nocase $overwrite "T"]} {
 	    return [list 412]
 	} elseif {![permission::permission_p \
@@ -581,10 +627,13 @@ ad_proc oacs_dav::impl::content_folder::move {} {
 	    return [list 423]
 	}
 
-
         db_exec_plsql delete_for_move ""
-	ns_log debug "CONTEXT IDS [db_list get_ids "select object_id from acs_objects where context_id=:dest_item_id"]"	
+	set response [list 204]
+	ns_log debug "\n ----- \n  CONTENT_FOLDER::MOVE OVERWRITING RETURNING 204  \n ----- \n"
+    } else {
+	set response [list 201]
     }
+
     # don't let anyone move root DAV folders in the
     # dav_site_node_folder_map
     if {![string equal [db_string site_node_folder ""] 0]} {
@@ -594,13 +643,13 @@ ad_proc oacs_dav::impl::content_folder::move {} {
     db_transaction {
 
 	if {![string equal $cur_parent_folder_id $new_parent_folder_id]} {
-	    ns_log debug "@@DAV@@ move folder $move_folder_id"
+	    ns_log debug "\n@@DAV@@ move folder $move_folder_id"
 	    db_exec_plsql move_folder ""
 	} elseif {![empty_string_p $new_name]} {
-	    ns_log debug "@@DAV@@ move folder rename $move_folder_id to $new_name"
+	    ns_log debug "\n@@DAV@@ move folder rename $move_folder_id to $new_name"
 	    db_exec_plsql rename_folder ""
 	}
-	set response [list 204]
+	
     } on_error {
 	return [list 500]
     }
@@ -625,7 +674,7 @@ ad_proc oacs_dav::impl::content_folder::delete {} {
     if {[catch {db_exec_plsql delete_folder ""} errmsg]} {
 	ns_log error "content_folder::delete $errmsg"
 	set response [list 500]
-#	ns_log debug "CONTEXT IDS [db_list get_ids "select object_id from acs_objects where context_id=:item_id"]"
+#	ns_log debug "\nCONTEXT IDS [db_list get_ids "select object_id from acs_objects where context_id=:item_id"]"
     } else {
 	set response [list 204]
 	tdav::delete_props $uri
@@ -642,16 +691,17 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
     set depth [oacs_dav::conn depth]
     set encoded_uri [list]
     foreach fragment [split [ad_conn url] "/"] {
-    	lappend encoded_uri [ns_urlencode $fragment]
+    	lappend encoded_uri [oacs_dav::urlencode $fragment]
     }   
-    # MS Web Folders can't handle encoded . in filenames so decode it
-    regsub -all {%2e} $encoded_uri {.} encoded_uri
+
     set folder_uri "[ad_url][join $encoded_uri "/"]"
     
-   if {![string match */ $folder_uri]} {
-	append folder_uri "/"
-    }
-
+    # this is wacky, but MS Web Folders usually (but not always)
+    # requests a collection without a trailing slash
+    # if you return a propfind with the href for the collection
+    # with a trailing slash, sometimes (but not always) it will
+    # get confused and show the collection as a member of itself
+    regsub {/$} $folder_uri {} folder_uri
     if {[empty_string_p $depth]} {
 	set depth 0
     }
@@ -671,15 +721,16 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
 	# is "D" the namespace??
 	lappend properties [list "D" "getcontentlength"] $content_length
 
-	ns_log debug "DAVEB item_id $item_id folder_id $folder_id $item_uri"
+#	ns_log debug "\nDAVEB item_id $item_id folder_id $folder_id $item_uri"
 	if {$item_id == $folder_id} {
-	    set item_uri ""
+	    set item_uri "/"
 	} else {
 	    set encoded_uri [list]
 	    foreach fragment [split $item_uri "/"] {
-		lappend encoded_uri [ns_urlencode $fragment]
+		lappend encoded_uri [oacs_dav::urlencode $fragment]
+#		ns_log debug "\npropfind: fragment \"$fragment\" encoded_uri \"$encoded_uri\" "
 	    }
-	    set item_uri "[join $encoded_uri "/"]"
+	    set item_uri "/[join $encoded_uri "/"]"
 	  
 	}
 	
@@ -756,7 +807,7 @@ ad_proc oacs_dav::impl::content_folder::unlock {} {
 	set ret_code 423
 	set body "Resource is locked."
     } else {
-	ns_log notice "tdav::check_lock_for_unlock = [tdav::check_lock_for_unlock $uri]]"
+	ns_log debug "\ntdav::check_lock_for_unlock = [tdav::check_lock_for_unlock $uri]]"
 	tdav::remove_lock $uri
 	set ret_code 204
 	set body ""
@@ -825,8 +876,6 @@ ad_proc oacs_dav::impl::content_revision::put {} {
 	return $response
     }
 
-    ns_log debug "oacs_dav::impl::content_revision::put parent_id=$parent_id item_id=$item_id root_folder_id=$root_folder_id name=$name tmp_filename=$tmp_filename"
-
     # create new item if necessary
     db_transaction {
         set mime_type [cr_filename_to_mime_type $name]
@@ -842,6 +891,14 @@ ad_proc oacs_dav::impl::content_revision::put {} {
 				 $tmp_size \
 				 $mime_type \
 				 $name]
+
+	    if {[file exists [tdav::get_lock_file $uri]]} {
+		# if there is a null lock use 204
+		set response [list 204]
+	    } else {
+		set response [list 201]
+	    }
+
 	} else {
 	    set revision_id [cr_import_content \
 				 -item_id $item_id \
@@ -851,10 +908,10 @@ ad_proc oacs_dav::impl::content_revision::put {} {
 				 $tmp_size \
 				 $mime_type \
 				 $name]
+            set response [list 204]
 	}
 	db_dml set_live_revision ""
 
-	set response [list 201]
     } on_error {
         set response [list 500]
         ns_log error "oacs_dav::impl::content_revision::put: $errmsg"
@@ -876,6 +933,9 @@ ad_proc oacs_dav::impl::content_revision::propfind {} {
 
     set depth [oacs_dav::conn depth]
     set prop_req [oacs_dav::conn prop_req]
+
+    set os_time_zone [clock format [clock seconds] -format %Z]
+
     # find the values
     db_1row get_properties ""
     set etag "1f9a-400-3948d0f5"
@@ -960,8 +1020,9 @@ ad_proc oacs_dav::impl::content_revision::copy {} {
 	return [list 409]
     }
     set dest_item_id [db_string get_dest_id "" -default ""]
+ns_log debug "\nDAV Revision Copy dest $target_uri parent_id $new_parent_folder_id"
     if {![empty_string_p $dest_item_id]} {
-	
+	ns_log debug "\n ----- \n DAV Revision Copy Folder Exists item_id $dest_item_id overwrite $overwrite \n ----- \n"	
 	if {![string equal -nocase $overwrite "T"]} {
 	    return [list 412]
 	} elseif {![permission::permission_p \
@@ -972,13 +1033,14 @@ ad_proc oacs_dav::impl::content_revision::copy {} {
 	} 
 	# according to the spec copy with overwrite means
         # delete then copy
-	ns_log notice "oacs_dav::revision::copy checking for lock on target"
+	ns_log debug "\noacs_dav::revision::copy checking for lock on target"
 	if {![string equal "unlocked" [tdav::check_lock $target_uri]]} {
 	    return [list 423]
 	}
 
         db_exec_plsql delete_for_copy ""
 	set response [list 204]
+	ns_log debug "\n ----- \n  CONTENT_REVISION::COPY OVERWRITING RETURNING 204  \n ----- \n"
     } else {
 	set response [list 201]
     }
@@ -1016,9 +1078,10 @@ ad_proc oacs_dav::impl::content_revision::move {} {
     if {![string equal "unlocked" [tdav::check_lock $uri]]} {
 	return [list 423]
     }
+ns_log debug "\nDAV Revision move dest $target_uri parent_id $new_parent_folder_id"
     set dest_item_id [db_string get_dest_id "" -default ""]
     if {![empty_string_p $dest_item_id]} {
-	
+	ns_log debug "\n ----- \n DAV Revision move Folder Exists item_id $dest_item_id overwrite $overwrite \n ----- \n"	
 	if {![string equal -nocase $overwrite "T"]} {
 	    return [list 412]
 	} elseif {![permission::permission_p \
@@ -1033,6 +1096,7 @@ ad_proc oacs_dav::impl::content_revision::move {} {
 
         db_exec_plsql delete_for_move ""
 	set response [list 204]
+	ns_log debug "\n ----- \n  CONTENT_REVISION::MOVE OVERWRITING RETURNING 204  \n ----- \n"
     } else {
 	set response [list 201]
     }
@@ -1093,7 +1157,7 @@ ad_proc oacs_dav::impl::content_revision::unlock {} {
 	set ret_code 423
 	set body "Resource is locked."
     } else {
-	ns_log notice "tdav::check_lock_for_unlock = [tdav::check_lock_for_unlock $uri]]"
+	ns_log debug "\ntdav::check_lock_for_unlock = [tdav::check_lock_for_unlock $uri]]"
 	tdav::remove_lock $uri
 	set ret_code 204
 	set body ""
