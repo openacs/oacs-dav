@@ -8,13 +8,13 @@
     <singleton-p>t</singleton-p>
     <auto-mount>webdav-support</auto-mount>
 
-    <version name="0.3d" url="http://openacs.org/repository/download/apm/oacs-dav-0.3d.apm">
+    <version name="0.4d" url="http://openacs.org/repository/download/apm/oacs-dav-0.4d.apm">
         <owner url="mailto:dave@thedesignexperience.org">dave bauer</owner>
         <summary>Provides services to enable webDAV access to content repository items.</summary>
         <release-date>2004-02-16</release-date>
         <description format="text/html">An interface to the tDAV webDAV package. oacs-dav provides services to offer webDAV access to content repository data.</description>
 
-        <provides url="oacs-dav" version="0.3d"/>
+        <provides url="oacs-dav" version="0.4d"/>
 
         <callbacks>
             <callback type="after-install"  proc="oacs_dav::install::package_install"/>
