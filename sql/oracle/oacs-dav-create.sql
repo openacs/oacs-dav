@@ -11,7 +11,8 @@ create table dav_site_node_folder_map (
 		        constraint dav_sn_folder_map_node_id_un
 			unique
                         constraint dav_sn_folder_map_node_id_fk
-                        references site_nodes,
+                        references site_nodes
+			on delete cascade,
         folder_id       integer
                         constraint dav_impls_folder_id_fk
                         references cr_folders,
