@@ -392,8 +392,8 @@ ad_proc -public oacs_dav::handle_request { uri method args } {
     # then we would probably have to send that to tDAV for processing
     ns_log debug "DAV: response is \"$response\""
 
-    if {![string equal -nocase "get" $method] && \
-	    ![string equal -nocase "head" $method]} {
+    if {![string equal -nocase "get" $method]
+	&& ![string equal -nocase "head" $method]} {
 
 	tdav::respond $response
     }
