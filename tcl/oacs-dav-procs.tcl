@@ -145,6 +145,7 @@ ad_proc oacs_dav::authorize { args } {
                                       -privilege "create"] ]
 	}
 	propfind -
+	head -
 	get {
 	    # default for GET PROPFIND 
 	    set authorized_p [permission::permission_p \
