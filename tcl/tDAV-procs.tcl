@@ -122,7 +122,7 @@ proc tdav::read_xml {} {
     set xml [read $fp]
     close $fp
     ns_unlink -nocomplain $tmpfile
-
+    ns_log debug "\n-----tdav::read_xml XML = -----\n $xml \n ----- end ----- \n "
     return $xml
 }
 
@@ -1167,6 +1167,7 @@ proc tdav::respond { response } {
 	    set response_body [encoding convertto utf-8 $response_body]
 	}
     }
+    ns_log debug "\n  ----- tdav::response response_body ----- \n $response_body \n ----- end ----- \n"
     ns_return $response_code $mime_type $response_body
 }
 
@@ -1409,6 +1410,7 @@ proc tdav::respond::propfind { response } {
     
 
     set body [$d asXML -escapeNonASCII]
+    set body "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n${body}"
     set response [list $body {text/xml charset="utf-8"}]
     return $response
     

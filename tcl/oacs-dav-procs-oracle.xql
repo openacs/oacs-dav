@@ -15,10 +15,10 @@
   <fullquery
     name="oacs_dav::impl::content_folder::propfind.get_properties">
     <querytext>
-      select nvl (cr.content_length,4096) as content_length,
+      select nvl (cr.content_length,0) as content_length,
 	nvl (cr.mime_type,'*/*') as mime_type,
-	to_char(o.creation_date, 'YYYY-MM-DD"T"HH:MI:SS."00Z"') as creation_date,
-	to_char(o.last_modified, 'DY, DD MON YYYY HH:MI:SS "GMT"') as last_modified,
+	to_char(o.creation_date, 'YYYY-MM-DD"T"HH:MI:SS."000"') as creation_date,
+	to_char(o.last_modified, 'Dy, Dd Mon YYYY HH:MI:SS "${os_time_zone}"') as last_modified,
 	ci1.item_id,
 	case when ci1.item_id=:folder_id then '' else ci1.name end as name,
 	content_item.get_path(ci1.item_id,:folder_id) as item_uri,
@@ -26,16 +26,17 @@
 	as collection_p
       from (
 		select * from cr_items
-		where parent_id=:folder_id
-		or item_id=:folder_id
-	--	connect by prior item_id=parent_id
-	--	start with item_id=:folder_id
+		where (parent_id=:folder_id
+		or item_id=:folder_id)
+		and level <= :depth + 1
+		connect by prior item_id=parent_id
+		start with item_id=:folder_id
 	) ci1,
       cr_revisions cr, 
       acs_objects o
      where 
-      ci1.item_id=o.object_id and
-      ci1.live_revision = cr.revision_id(+)
+      ci1.item_id=o.object_id 
+     and ci1.live_revision = cr.revision_id(+)
      and exists (select 1
                   from acs_object_party_privilege_map m
                   where m.object_id = ci1.item_id

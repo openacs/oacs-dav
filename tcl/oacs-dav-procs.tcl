@@ -144,7 +144,17 @@ ad_proc oacs_dav::authorize { args } {
                                       -party_id $user_id \
                                       -privilege "create"] ]
 	}
-	propfind -
+	propfind {
+	    if {!$user_id} {
+		ns_returnunauthorized
+	    } else {
+		set authorized_p [permission::permission_p \
+				  -object_id $item_id \
+				  -party_id $user_id \
+				  -privilege "read"]
+	    }
+	}
+	head -
 	get {
 	    # default for GET PROPFIND 
 	    set authorized_p [permission::permission_p \
@@ -258,7 +268,7 @@ ad_proc -public oacs_dav::uri_prefix {
     @return URI prefix to use for WebDAV requests
 } {
     set oacs_dav_package_id [apm_package_id_from_key "oacs-dav"]
-    return [parameter::get -package_id $oacs_dav_package_id -parameter "WebDAV URL Prefix" -default "/dav"]
+    return [parameter::get -package_id $oacs_dav_package_id -parameter "WebDAVURLPrefix" -default "/dav"]
 }
 
 ad_proc -public oacs_dav::conn_setup {} {
@@ -391,7 +401,9 @@ ad_proc -public oacs_dav::handle_request { uri method args } {
     # then we would probably have to send that to tDAV for processing
     ns_log debug "DAV: response is \"$response\""
 
-    if {![string equal -nocase "get" $method]} {
+    if {![string equal -nocase "get" $method]
+	&& ![string equal -nocase "head" $method]} {
+
 	tdav::respond $response
     }
 }
@@ -432,6 +444,17 @@ ad_proc oacs_dav::impl::content_folder::get {} {
     # return something
     # if its just a plain file, and a GET then do we need to send anything
     # extra or just the file?
+    return [list 409]
+}
+
+ad_proc oacs_dav::impl::content_folder::head {} {
+    HEAD DAV method for content folders
+    can't get a folder
+} {
+
+    # I am not sure what the behavior is, but the client
+    # should be smart enough to do a propfind on a folder/collection
+    
     return [list 409]
 }
 
@@ -617,11 +640,18 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
 } {
     set user_id [oacs_dav::conn user_id]
     set depth [oacs_dav::conn depth]
-    set folder_uri [ad_url][ad_conn url]
-    # if client didn't put a / on folder_uri go ahead and tack it on
-    if {![string match */ $folder_uri]} {
+    set encoded_uri [list]
+    foreach fragment [split [ad_conn url] "/"] {
+    	lappend encoded_uri [ns_urlencode $fragment]
+    }   
+    # MS Web Folders can't handle encoded . in filenames so decode it
+    regsub -all {%2e} $encoded_uri {.} encoded_uri
+    set folder_uri "[ad_url][join $encoded_uri "/"]"
+    
+   if {![string match */ $folder_uri]} {
 	append folder_uri "/"
     }
+
     if {[empty_string_p $depth]} {
 	set depth 0
     }
@@ -631,6 +661,9 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
 
     # append the properties into response
     set all_properties [list]
+    # hack to get the OS time zone to tack on the end of oracle timestamps
+    # until we stop supporting oracle 8i
+    set os_time_zone [clock format [clock seconds] -format %Z]
     db_foreach get_properties "" {
 	set name $name
 	set etag "1f9a-400-3948d0f5"
@@ -641,6 +674,13 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
 	ns_log debug "DAVEB item_id $item_id folder_id $folder_id $item_uri"
 	if {$item_id == $folder_id} {
 	    set item_uri ""
+	} else {
+	    set encoded_uri [list]
+	    foreach fragment [split $item_uri "/"] {
+		lappend encoded_uri [ns_urlencode $fragment]
+	    }
+	    set item_uri "[join $encoded_uri "/"]"
+	  
 	}
 	
 	lappend properties [list "D" "getcontenttype"] $mime_type
@@ -738,6 +778,21 @@ ad_proc oacs_dav::impl::content_revision::get {} {
     #should return the DAV content for the content item
     #for now we always get live/latest revision
 
+    cr_write_content -item_id $item_id
+}
+
+ad_proc oacs_dav::impl::content_revision::head {} {
+    GET DAV method for generic content revision
+    @author Dave Bauer
+    @param uri
+} {
+
+    set item_id [oacs_dav::conn item_id]
+
+    # cr_write_content works correctly for HEAD requests
+    # with filesystem storage, it sends out the content
+    # on lob storage. that needs to be fixed.
+    
     cr_write_content -item_id $item_id
 }
 
