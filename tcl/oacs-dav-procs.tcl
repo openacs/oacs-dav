@@ -144,7 +144,16 @@ ad_proc oacs_dav::authorize { args } {
                                       -party_id $user_id \
                                       -privilege "create"] ]
 	}
-	propfind -
+	propfind {
+	    if {!$user_id} {
+		ns_returnunauthorized
+	    } else {
+		set authorized_p [permission::permission_p \
+				  -object_id $item_id \
+				  -party_id $user_id \
+				  -privilege "read"]
+	    }
+	}
 	head -
 	get {
 	    # default for GET PROPFIND 
@@ -635,6 +644,8 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
     foreach fragment [split [ad_conn url] "/"] {
     	lappend encoded_uri [ns_urlencode $fragment]
     }   
+    # MS Web Folders can't handle encoded . in filenames so decode it
+    regsub -all {%2e} $encoded_uri {.} encoded_uri
     set folder_uri "[ad_url][join $encoded_uri "/"]"
     
    if {![string match */ $folder_uri]} {
