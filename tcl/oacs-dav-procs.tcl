@@ -158,10 +158,14 @@ ad_proc oacs_dav::authorize { args } {
                                         -object_id $item_id \
                                         -party_id $user_id \
                                         -privilege "read"] \
-                              && [permission::permission_p \
+                              && ([permission::permission_p \
                                       -object_id [oacs_dav::conn dest_parent_id ] \
                                       -party_id $user_id \
-                                      -privilege "create"] ]
+                                      -privilege "create"] \
+                                      || [permission::perission_p \
+                                              -object_id [oacs_dav::conn dest_parent_id ] \
+                                             -party_id $user_id \
+                                              -privilege "write"])]
 	}
 	propfind {
 	    if {!$user_id} {
@@ -964,7 +968,7 @@ ad_proc oacs_dav::impl::content_revision::put {} {
         set response [list 500]
         ns_log error "oacs_dav::impl::content_revision::put: $errmsg"
     }
-
+    file delete $tmp_filename
     # at least we need to return the http_status
     return $response
 
