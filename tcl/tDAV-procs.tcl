@@ -1572,10 +1572,12 @@ if {![nsv_exists tdav_filters_installed filters_installed]} {
 #     ns_perm addgroup tdav tdav tdav1
 
     set tdav_shares [ns_configsection "ns/server/[ns_info server]/tdav/shares"]
-    for {set i 0} {$i < [ns_set size $tdav_shares]} {incr i} {
-	set tdav_share [ns_configsection "ns/server/[ns_info server]/tdav/share/[ns_set key $tdav_shares $i]"] 
-        tdav::apply_filters [ns_set get $tdav_share uri] [ns_set get $tdav_share options]
-	# uncomment the next line if you are using ns_perm authentication
-	# tdav::allow_group [ns_set get $tdav_share uri] tdav
+    if { ![empty_string_p $tdav_shares] } {
+        for {set i 0} {$i < [ns_set size $tdav_shares]} {incr i} {
+            set tdav_share [ns_configsection "ns/server/[ns_info server]/tdav/share/[ns_set key $tdav_shares $i]"] 
+            tdav::apply_filters [ns_set get $tdav_share uri] [ns_set get $tdav_share options]
+            # uncomment the next line if you are using ns_perm authentication
+            # tdav::allow_group [ns_set get $tdav_share uri] tdav
+        }
     }
 }
