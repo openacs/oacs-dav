@@ -11,7 +11,7 @@
   <fullquery
     name="oacs_dav::impl::content_folder::propfind.get_properties">
     <querytext>
-      select coalesce (cr.content_length,4096) as content_length,
+      select coalesce (cr.content_length,0) as content_length,
 	coalesce(cr.mime_type,'*/*') as mime_type,
 	to_char(timezone('GMT',o.creation_date) :: timestamptz ,'YYYY-MM-DD"T"HH:MM:SS.MS"Z"') as creation_date,
 	to_char(timezone('GMT',o.last_modified) :: timestamptz ,'Dy, DD Mon YYYY HH:MM:SS TZ') as last_modified,
