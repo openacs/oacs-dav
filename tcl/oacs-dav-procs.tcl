@@ -791,8 +791,8 @@ ad_proc oacs_dav::impl::content_revision::put {} {
 				 -item_id $item_id \
 				 -storage_type file \
 				 $parent_id \
-				 $tmp_size \
 				 $tmp_filename \
+				 $tmp_size \
 				 $mime_type \
 				 $name]
 	}
