@@ -1501,7 +1501,7 @@ proc tdav::conn {args} {
 }
 
 
-proc tdav::apply_filters {{uri "/*"} {options "OPTIONS GET HEAD POST DELETE TRACE PROPFIND PROPPATCH COPY MOVE MKCOL LOCK UNLOCK"}} {
+proc tdav::apply_filters {{uri "/*"} {options "OPTIONS GET HEAD POST DELETE TRACE PROPFIND PROPPATCH COPY MOVE MKCOL LOCK UNLOCK"} {enable_filesystem "f"}} {
 
     # Verify that the options are valid options. Webdav requires
     # support for a minimum set of options. And offers support for a
@@ -1541,13 +1541,18 @@ Allowed web dav options are: '$allowed_options'."
     # Register procedures for selected tDAV options. Do not register a
     # proc for OPTIONS, GET, POST or HEAD.
 
-    foreach option $options {
-	if {[lsearch -exact [list OPTIONS GET POST HEAD] $option] < 0} {
-	    ns_log debug "tDAV registering proc for $uri on $option"
-	    ns_register_proc [string toupper $option] "${uri}" tdav::webdav_[string tolower $option]
+    if {[string equal "true" $enable_filesystem]} {    
+	
+	foreach option $options {
+	    if {[lsearch -exact [list OPTIONS GET POST HEAD] $option] < 0} {
+		ns_log debug "tDAV registering proc for $uri on $option"
+		ns_register_proc [string toupper $option] "${uri}" tdav::webdav_[string tolower $option]
+	    }
 	}
+	ns_log notice "tDAV: Registered procedures on $uri"
+    } else {
+	ns_log notice "tDAV: Filesystem access by WebDAV disabled"
     }
-    ns_log notice "tDAV: Registered procedures on $uri"
     # Store the tDAV properties in an nsv set so that the registerd
     # filters and procedures don't have to read the config file
     # anymore.
@@ -1638,7 +1643,7 @@ if {![nsv_exists tdav_filters_installed filters_installed]} {
     if { ![string equal "" $tdav_shares] } {
         for {set i 0} {$i < [ns_set size $tdav_shares]} {incr i} {
             set tdav_share [ns_configsection "ns/server/[ns_info server]/tdav/share/[ns_set key $tdav_shares $i]"] 
-            tdav::apply_filters [ns_set get $tdav_share uri] [ns_set get $tdav_share options]
+            tdav::apply_filters [ns_set get $tdav_share uri] [ns_set get $tdav_share options] [ns_set get $tdav_share enablefilesystem]
             # uncomment the next line if you are using ns_perm authentication
             # tdav::allow_group [ns_set get $tdav_share uri] tdav
         }
