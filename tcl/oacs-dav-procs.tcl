@@ -642,6 +642,9 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
 
     # append the properties into response
     set all_properties [list]
+    # hack to get the OS time zone to tack on the end of oracle timestamps
+    # until we stop supporting oracle 8i
+    set os_time_zone [clock format [clock seconds] -format %Z]
     db_foreach get_properties "" {
 	set name $name
 	set etag "1f9a-400-3948d0f5"

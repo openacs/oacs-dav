@@ -12,7 +12,7 @@ ad_library {
 
 set prefix [parameter::get \
 		-package_id [apm_package_id_from_key "oacs-dav"] \
-		-parameter "WebDAV URL Prefix" \
+		-parameter "WebDAVURLPrefix" \
 		-default "/dav"]
 
 set url "${prefix}/*"
