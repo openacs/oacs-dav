@@ -17,8 +17,8 @@
     <querytext>
       select nvl (cr.content_length,0) as content_length,
 	nvl (cr.mime_type,'*/*') as mime_type,
-	to_char(o.creation_date, 'YYYY-MM-DD"T"HH:MI:SS."000Z"') as creation_date,
-	to_char(o.last_modified, 'Dy, Dd Mon YYYY HH:MI:SS "GMT"') as last_modified,
+	to_char(o.creation_date, 'YYYY-MM-DD"T"HH:MI:SS."000"') as creation_date,
+	to_char(o.last_modified, 'Dy, Dd Mon YYYY HH:MI:SS "${os_time_zone}"') as last_modified,
 	ci1.item_id,
 	case when ci1.item_id=:folder_id then '' else ci1.name end as name,
 	content_item.get_path(ci1.item_id,:folder_id) as item_uri,
