@@ -489,7 +489,7 @@ ns_log notice "DAV Folder Copy dest $target_uri parent_id $new_parent_folder_id"
 	return [list 409]
     }
 
-    set dest_item_id [db_string get_dest_id ""]
+    set dest_item_id [db_string get_dest_id "" -default ""]
     if {![empty_string_p $dest_item_id]} {
 	ns_log notice "DAV Folder Copy Folder Exists item_id $dest_item_id overwrite $overwrite"
 	if {![string equal -nocase $overwrite "T"]} {
@@ -539,7 +539,7 @@ ad_proc oacs_dav::impl::content_folder::move {} {
 	return $response
     }
 
-    set dest_item_id [db_string get_dest_id ""]
+    set dest_item_id [db_string get_dest_id "" -default ""]
     ns_log debug "@DAV@@ folder move new_name $new_name dest_id $dest_item_id new_folder_id $new_parent_folder_id" 
     if {![empty_string_p $dest_item_id]} {
 	ns_log notice "DAV Folder Move Folder Exists item_id $dest_item_id overwrite $overwrite"
@@ -902,7 +902,7 @@ ad_proc oacs_dav::impl::content_revision::copy {} {
     if {[empty_string_p $new_parent_folder_id]} {
 	return [list 409]
     }
-    set dest_item_id [db_string get_dest_id ""]
+    set dest_item_id [db_string get_dest_id "" -default ""]
     if {![empty_string_p $dest_item_id]} {
 	
 	if {![string equal -nocase $overwrite "T"]} {
@@ -959,7 +959,7 @@ ad_proc oacs_dav::impl::content_revision::move {} {
     if {![string equal "unlocked" [tdav::check_lock $uri]]} {
 	return [list 423]
     }
-    set dest_item_id [db_string get_dest_id ""]
+    set dest_item_id [db_string get_dest_id "" -default ""]
     if {![empty_string_p $dest_item_id]} {
 	
 	if {![string equal -nocase $overwrite "T"]} {

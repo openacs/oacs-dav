@@ -17,8 +17,8 @@
     <querytext>
       select nvl (cr.content_length,4096) as content_length,
 	nvl (cr.mime_type,'*/*') as mime_type,
-	to_char(o.creation_date, 'YYYY-MM-DD"T"HH:MM:SS.MS"Z"') as creation_date,
-	to_char(o.last_modified, 'Dy, DD Mon YYYY HH:MM:SS TZ') as last_modified,
+	to_char(o.creation_date, 'YYYY-MM-DD"T"HH:MI:SS."00Z"') as creation_date,
+	to_char(o.last_modified, 'DY, DD MON YYYY HH:MI:SS "GMT"') as last_modified,
 	ci1.item_id,
 	case when ci1.item_id=:folder_id then '' else ci1.name end as name,
 	content_item.get_path(ci1.item_id,:folder_id) as item_uri,
@@ -26,8 +26,10 @@
 	as collection_p
       from (
 		select * from cr_items
-		connect by prior parent_id=item_id
-		start with item_id=:folder_id
+		where parent_id=:folder_id
+		or item_id=:folder_id
+	--	connect by prior item_id=parent_id
+	--	start with item_id=:folder_id
 	) ci1,
       cr_revisions cr, 
       acs_objects o
@@ -66,17 +68,19 @@
   <fullquery
     name="oacs_dav::impl::content_folder::mkcol.create_folder">
     <querytext>
-      select content_folder.new(
+	begin
+	      :1 := content_folder.new(
               name => :new_folder_name,
               label => :label,
               description => :description,
               parent_id => :parent_id,
               context_id => :parent_id,
-              new_folder_id => NULL,
-              creation_date => current_timestamp,
+              folder_id => NULL,
+              creation_date => sysdate,
               creation_user => :user_id,
               creation_ip => :peer_addr
-      )
+	      );
+	end;
     </querytext>
   </fullquery>
 
@@ -146,9 +150,9 @@
   <fullquery name="oacs_dav::impl::content_revision::copy.copy_item">
     <querytext>
 	begin
-      		:1 := content_item.copy (
+      		:1 := content_item.copy2 (
 	              item_id => :copy_item_id,
-	              target_id => :new_parent_folder_id,
+	              target_folder_id => :new_parent_folder_id,
 	              creation_user => :user_id,
 	              creation_ip => :peer_addr,
 	              name => :new_name
@@ -157,20 +161,20 @@
     </querytext>
   </fullquery>
 
-  <fullquery name="oacs_dav::impl::content_revision::copy.delete_for_move">
+  <fullquery name="oacs_dav::impl::content_revision::move.delete_for_move">
     <querytext>
 	begin
-      		content_item.delete(
+      		content_item.del(
 	              item_id => :dest_item_id
 	      	);
 	end;
     </querytext>
   </fullquery>
   
-  <fullquery name="oacs_dav::impl::content_revision::move.delete_for_copy">
+  <fullquery name="oacs_dav::impl::content_revision::copy.delete_for_copy">
     <querytext>
 	begin
-		content_item.delete(
+		content_item.del(
 	            item_id => :dest_item_id
         	);
 	end;
@@ -180,7 +184,7 @@
   <fullquery name="oacs_dav::impl::content_revision::delete.delete_item">
     <querytext>
 	begin
-		content_item.delete (
+		content_item.del (
                 	item_id => :item_id
 	      );
 	end;
@@ -190,7 +194,7 @@
   <fullquery name="oacs_dav::impl::content_folder::delete.delete_folder">
     <querytext>
 	begin
-		content_folder.delete (
+		content_folder.del (
 	              folder_id => :item_id,
         	      cascade_p => 't'
 	      );
@@ -212,23 +216,13 @@
 
   <fullquery name="oacs_dav::impl::content_folder::copy.get_dest_id">
     <querytext>
-	begin
-		:1 := content_item.get_id(
-	             item_path => :new_name,
-	             root_folder_id => :new_parent_folder_id,
-	             resolve_index => 'f');
-	end;
+	select content_item.get_id(:new_name,:new_parent_folder_id,'f') from dual
     </querytext>
   </fullquery>
 
   <fullquery name="oacs_dav::impl::content_folder::move.get_dest_id">
     <querytext>
-	begin
-		:1 := content_item.get_id(
-	             item_path => :new_name,
-	             root_folder_id => :new_parent_folder_id,
-	             resolve_index => 'f');
-	end;
+	select content_item.get_id(:new_name,:new_parent_folder_id,'f') from dual
     </querytext>
   </fullquery>
 
@@ -236,7 +230,7 @@
     name="oacs_dav::impl::content_folder::move.delete_for_move">
     <querytext>
 	begin
-      		content_folder.delete(
+      		content_folder.del(
 	              folder_id => :dest_item_id,
 	              cascade_p => 't');
 	end;
@@ -247,7 +241,7 @@
     name="oacs_dav::impl::content_folder::copy.delete_for_copy">
     <querytext>
 	begin
-	      content_folder.delete(
+	      content_folder.del(
 	              folder_id => :dest_item_id,
 	              cascade_p => 't');
 	end;
@@ -256,23 +250,13 @@
   
   <fullquery name="oacs_dav::impl::content_revision::copy.get_dest_id">
     <querytext>
-	begin
-		:1 := content_item.get_id(
-	             item_path => :new_name,
-	             root_folder_id => :new_parent_folder_id,
-	             resolve_index => 'f');
-	end;
+	select content_item.get_id(:new_name,:new_parent_folder_id,'f') from dual
     </querytext>
   </fullquery>
 
   <fullquery name="oacs_dav::impl::content_revision::move.get_dest_id">
     <querytext>
-	begin
-		:1 := content_item.get_id(
-	             item_path => :new_name,
-	             root_folder_id => :new_parent_folder_id,
-	             resolve_index => 'f');
-	end;
+	select content_item.get_id(:new_name,:new_parent_folder_id,'f') from dual
     </querytext>
   </fullquery>
 
