@@ -45,6 +45,7 @@ ad_proc -private oacs_dav::install::create_service_contracts {
 } {
     oacs_dav::install::create_dav_sc
     oacs_dav::install::create_dav_put_type_sc
+    oacs_dav::install::create_dav_mkcol_type_sc
 }
 
 ad_proc -private oacs_dav::install::create_dav_sc {
@@ -145,12 +146,33 @@ ad_proc -private oacs_dav::install::create_dav_put_type_sc {
     
 }
 
+ad_proc -private oacs_dav::install::create_dav_mkcol_type_sc {
+} {
+    create dav_mkcol_type service contract
+} {
+    set contract_name "dav_mkcol_type"
+    set spec {
+        description "returns content type to use for MKCOL operation"
+        operations {
+            get_type {
+                description "DAV MKCOL Content Type"
+                output { content_type:string }
+            }
+	}
+    }
+
+    acs_sc::contract::new_from_spec \
+	-spec [concat [list name $contract_name] $spec ]
+    
+}
+
 ad_proc -private oacs_dav::install::delete_service_contracts {
 } {
     remove service contracts on uninstall
 } {
     acs_sc::contract::delete -name dav
     acs_sc::contract::delete -name dav_put_type
+    acs_sc::contract::delete -name dav_mkcol_type
 }
 
 ad_proc -private oacs_dav::install::register_implementation {
@@ -210,4 +232,20 @@ ad_proc -private oacs_dav::install::unregister_implementation {
 } {
     acs_sc::impl::delete -contract_name dav -impl_name content_folder
     acs_sc::impl::delete -contract_name dav -impl_name content_revision
+}
+
+ad_proc -private oacs_dav::install::upgrade {
+    -from_version_name
+    -to_version_name
+} {
+    Install new DAV service contracts
+} {
+    apm_upgrade_logic \
+	-from_version_name $from_version_name \
+	-to_version_name $to_version_name \
+	-spec {
+	    1.0b1 1.0b2 {
+		oacs_dav::install::create_dav_mkcol_type_sc
+	    }
+	}
 }
