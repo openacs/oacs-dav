@@ -18,7 +18,7 @@
     </querytext>
   </fullquery>
 
-  <fullquery name="oacs_dav::register_folder.remove_folder">
+  <fullquery name="oacs_dav::unregister_folder.remove_folder">
     <querytext>
       delete from dav_site_node_folder_map
       where folder_id=:folder_id
