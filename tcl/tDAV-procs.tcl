@@ -43,7 +43,6 @@
 
 
 # ------------------------------------------------------------
-
 # Silly workaround so that AOLserver can find scripts via "package require".
 # set tcl_library [file join $tcl_pkgPath tcl${tcl_version}]
 # source [file join $tcl_library init.tcl]
@@ -65,6 +64,10 @@ namespace eval tdav {}
 # Results:
 #     returns an HTTP response containing WebDAV options supported
 #
+# TODO Make this smart to return options based on URI
+# We still need to pretend that the site root supports DAV 
+# methods or some clients get confused.
+
 proc tdav::filter_webdav_options {args} {
     set dav_level {1,2}
     ns_set put [ns_conn outputheaders] DAV $dav_level
@@ -300,9 +303,6 @@ proc tdav::read_lock {uri} {
     set l [eval $e]
     close $f
 
-    file stat [tdav::get_lock_file $uri] file_info
-    set t $file_info(mtime)    
-   
     return $l
 }
 
@@ -332,20 +332,23 @@ proc tdav::dbm_write_array {uri arr} {
     # throw errors
 }
 
-
-# tdav::check_lock_timeout
+# tdav::lock_timeout_left
 #
-#     check if lock has timed out
+# timeout
+#    total length of timeout set in seconds
 #
-# Arguments:
-#     uri URI of request
+# locktime
+#    time lock was created in any format clock scan can accept
 #
-# Results:
 
-proc tdav::check_lock_timeout { uri } {
-
-    
-
+proc tdav::lock_timeout_left { timeout locktime } {
+    set locktime [clock scan $locktime]
+    set lockexpiretime [clock scan "$timeout seconds" -base $locktime]
+    set timeout_left [expr $lockexpiretime - [clock seconds]]
+    if {$timeout_left < 0} {
+	set timeout_left 0
+    }
+    return $timeout_left
 }
 
 # tdav::check_lock
@@ -372,6 +375,11 @@ proc tdav::check_lock {uri} {
     if {[file exists [tdav::get_lock_file $uri]]} {
        set lockinfo [tdav::read_lock $uri]
 
+	# check if lock is expired
+	if {[tdav::lock_timeout_left [lindex $lockinfo 4] [lindex $lockinfo 6]] == 0 } {
+	    tdav::remove_lock $uri
+	    return "unlocked"
+	}
 	set hdr [ns_set iget [ns_conn headers] If]
 	
 	# the If header exists, work, otherwise 423
@@ -1096,10 +1104,12 @@ proc tdav::filter_webdav_lock {args} {
     return filter_ok
 }
 
-proc tdav::set_lock {uri depth type scope owner {timeout "180"} } {
-
+proc tdav::set_lock {uri depth type scope owner {timeout "180"} {locktime ""} } {
+    if {[string equal "" $locktime]} {
+	set locktime [clock format [clock seconds]]
+    }
     set token "opaquelocktoken:[ns_rand 2147483647]"
-    set lock [list $type $scope $owner $token $timeout $depth]
+    set lock [list $type $scope $owner $token $timeout $depth $locktime]
     tdav::write_lock $uri $lock
     return $token
 
@@ -1130,10 +1140,10 @@ proc tdav::webdav_lock {} {
 	if {![empty_string_p $existing_lock_token] && [file exists [tdav::get_lock_file $uri]} {
 	    
 	    set old_lock [tdav::read_lock $uri]
-	    set new_lock [list [lindex $old_lock 0] [lindex $old_lock 1] [lindex $old_lock 2] [lindex $old_lock 3] $timeout $depth]
+	    set new_lock [list [lindex $old_lock 0] [lindex $old_lock 1] [lindex $old_lock 2] [lindex $old_lock 3] $timeout [clock format [clock seconds]]]
 	    tdav::write_lock $uri $new_lock
 	} else {
-	    set token [tdav::set_lock $uri $depth $type $scope $owner $depth]
+	    set token [tdav::set_lock $uri $depth $type $scope $owner $timeout [clock format [clock seconds]]]
 	}
 	set ret_code 200
 
@@ -1222,9 +1232,7 @@ proc tdav::respond::delete { response } {
 
 proc tdav::respond::lock { response } {
     array set lock [lindex $response 1]
-    if {[string equal "" $lock(timeout)]} {
-	set lock(timeout) 300
-    }
+
     set body [subst {<?xml version="1.0" encoding="utf-8"?>
 	<prop xmlns="DAV:">
 	<lockdiscovery>
@@ -1410,32 +1418,38 @@ proc tdav::respond::propfind { response } {
 	set lockdiscovery [$d createElement D:lockdiscovery]
 	regsub {http://[^/]+/} $href {/} local_uri
 	if {[file exists [tdav::get_lock_file $local_uri]]} {
+	    # check for timeout
 	    set lockinfo [tdav::read_lock $local_uri]
-	    set activelock [$d createElement D:activelock]
-	    set locktype [$d createElement D:locktype]
-	    set lockscope [$d createElement D:lockscope]
-	    set depth [$d createElement D:depth]
-	    set owner [$d createElement D:owner]
-	    set timeout [$d createElement D:timeout]
-	    set locktoken [$d createElement D:locktoken]
-	    set locktokenhref [$d createElement D:href]
-	    
-	    $locktype appendChild [$d createElement D:[lindex $lockinfo 0]]
-	    $lockscope appendChild [$d createElement D:[lindex $lockinfo 1]]
-	    $depth appendChild [$d createTextNode [lindex $lockinfo 5]]
-	    $timeout appendChild [$d createTextNode Second-[lindex $lockinfo 4]]
-	    $owner appendChild [$d createTextNode [lindex $lockinfo 2]]
-	    $locktokenhref appendChild [$d createTextNode [lindex $lockinfo 3]]
-	    $locktoken appendChild $locktokenhref
+	    set lock_timeout_left [tdav::lock_timeout_left [lindex $lockinfo 4] [lindex $lockinfo 6]]
+	    if {$lock_timeout_left > 0} {
 
-	    $activelock appendChild $locktype
-	    $activelock appendChild $lockscope
-	    $activelock appendChild $depth
-	    $activelock appendChild $timeout
-	    $activelock appendChild $owner
-	    $activelock appendChild $locktoken
+		set activelock [$d createElement D:activelock]
+		set locktype [$d createElement D:locktype]
+		set lockscope [$d createElement D:lockscope]
+		set depth [$d createElement D:depth]
+		set owner [$d createElement D:owner]
+		set timeout [$d createElement D:timeout]
+		set locktoken [$d createElement D:locktoken]
+		set locktokenhref [$d createElement D:href]
+		
+		$locktype appendChild [$d createElement D:[lindex $lockinfo 0]]
+		$lockscope appendChild [$d createElement D:[lindex $lockinfo 1]]
+		$depth appendChild [$d createTextNode [lindex $lockinfo 5]]
 
-	    $lockdiscovery appendChild $activelock
+		$timeout appendChild [$d createTextNode Second-$lock_timeout_left]
+		$owner appendChild [$d createTextNode [lindex $lockinfo 2]]
+		$locktokenhref appendChild [$d createTextNode [lindex $lockinfo 3]]
+		$locktoken appendChild $locktokenhref
+
+		$activelock appendChild $locktype
+		$activelock appendChild $lockscope
+		$activelock appendChild $depth
+		$activelock appendChild $timeout
+		$activelock appendChild $owner
+		$activelock appendChild $locktoken
+
+		$lockdiscovery appendChild $activelock
+	    }
 	}
 
 	$prop appendChild $lockdiscovery
