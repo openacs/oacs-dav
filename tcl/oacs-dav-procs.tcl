@@ -30,7 +30,7 @@ ad_proc oacs_dav::urlencode { string } {
 } {
     set encoded_string [ns_urlencode $string]
     set encoded_string [string map -nocase \
-			    {%2d - %5f _ %24 $ %2e . %21 ! %28 ( %29 ) %27 ' %2c ,} $encoded_string]
+			    {+ %20 %2d - %5f _ %24 $ %2e . %21 ! %28 ( %29 ) %27 ' %2c ,} $encoded_string]
      
    return $encoded_string
 }
@@ -92,6 +92,13 @@ ad_proc oacs_dav::authorize { args } {
     the URI
 } {
     ns_log debug "\nOACS-DAV running oacs_dav::authorize"
+
+    # Restrict to SSL if required
+    if { [security::RestrictLoginToSSLP]  && ![security::secure_conn_p] } {
+	ns_returnunauthorized
+	return filter_return
+    }
+
     # set common data for all requests 
     oacs_dav::conn_setup
    
@@ -287,7 +294,7 @@ ad_proc -public oacs_dav::conn_setup {} {
     Setup oacs_dav::conn, authenticate user
 } {
     ad_conn -reset
-    set uri [ns_conn url]
+    set uri [ns_urldecode [ns_conn url]]
     ns_log debug "\nconn_setp uri \"$uri\" "
     set dav_url_regexp "^[oacs_dav::uri_prefix]"
     regsub $dav_url_regexp $uri {} uri
@@ -307,7 +314,7 @@ ad_proc -public oacs_dav::conn_setup {} {
 
     set destination [ns_urldecode [ns_set iget [ns_conn headers] Destination]]
 
-    regsub {(http|https)://[^/]+/} $destination {/} dest
+    regsub {https?://[^/]+/} $destination {/} dest
 
      regsub $dav_url_regexp $dest {} dest
 
@@ -388,7 +395,11 @@ ad_proc -public oacs_dav::handle_request { uri method args } {
 	# ask package what content type to use
 	    switch -- $method {
 		mkcol {
-		    set content_type "content_folder"
+		    if {![acs_sc_binding_exists_p dav_mkcol_type $package_key]} {
+			set content_type "content_folder"
+		    } else {
+			set content_type [acs_sc_call dav_mkcol_type get_type "" $package_key]
+		    }
 		}
 		put {
 		    if {![acs_sc_binding_exists_p dav_put_type $package_key]} {
@@ -565,8 +576,8 @@ ad_proc oacs_dav::impl::content_folder::copy {} {
 	} 
 	# according to the spec copy with overwrite means
         # delete then copy
-	set blocked_p [oacs_dav::children_have_permission_p -item_id $copy_folder_id -user_id $user_id -privilege "delete"]
-	if {$blocked_p} {
+	set children_permission_p [oacs_dav::children_have_permission_p -item_id $copy_folder_id -user_id $user_id -privilege "delete"]
+	if {!$children_permission_p} {
 	    return [list 409]
 	}
 	if {![string equal "unlocked" [tdav::check_lock $target_uri]]} {
@@ -578,6 +589,7 @@ ad_proc oacs_dav::impl::content_folder::copy {} {
     } else {
 	set response [list 201]
     }
+    set err_p 0
     db_transaction {
 	db_exec_plsql copy_folder ""
 	# we need to do this because in oracle content_folder__copy
@@ -586,6 +598,10 @@ ad_proc oacs_dav::impl::content_folder::copy {} {
 	# update all child items revisions to live revision
 	db_dml update_child_revisions "" 
     } on_error {
+	set err_p 1
+    }
+
+    if { $err_p } {
 	return [list 500]
     }
 
@@ -637,8 +653,8 @@ ad_proc oacs_dav::impl::content_folder::move {} {
 	    return [list 423]
 	}
 	# TODO check if we have permission over everything inside
-	set blocked_p [oacs_dav::children_have_permission_p -item_id $move_folder_id -user_id $user_id -privilege "delete"]
-	if {$blocked_p} {
+	set children_permission_p [oacs_dav::children_have_permission_p -item_id $move_folder_id -user_id $user_id -privilege "delete"]
+	if {!$children_permission_p} {
 	    return [list 409]
 	}
         db_exec_plsql delete_for_move ""
@@ -654,8 +670,8 @@ ad_proc oacs_dav::impl::content_folder::move {} {
 	return [list 403]
     }
     
+    set err_p 0
     db_transaction {
-
 	if {![string equal $cur_parent_folder_id $new_parent_folder_id]} {
 	    ns_log debug "\n@@DAV@@ move folder $move_folder_id"
 	    db_exec_plsql move_folder ""
@@ -669,8 +685,13 @@ ad_proc oacs_dav::impl::content_folder::move {} {
 	}
 	
     } on_error {
+	set err_p 1
+    }
+
+    if { $err_p } {
 	return [list 500]
     }
+
     tdav::copy_props $uri $target_uri
     tdav::delete_props $uri
     tdav::remove_lock $uri
@@ -689,8 +710,8 @@ ad_proc oacs_dav::impl::content_folder::delete {} {
     if {![string equal "unlocked" [tdav::check_lock $uri]]} {
 	return [list 423]
     }
-    set blocked_p [oacs_dav::children_have_permission_p -item_id $item_id -user_id $user_id -privilege "delete"]
-	if {$blocked_p} {
+    set children_permission_p [oacs_dav::children_have_permission_p -item_id $item_id -user_id $user_id -privilege "delete"]
+	if {!$children_permission_p} {
 	    return [list 403]
 	}
     if {[catch {db_exec_plsql delete_folder ""} errmsg]} {
@@ -716,7 +737,7 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
     	lappend encoded_uri [oacs_dav::urlencode $fragment]
     }   
 
-    set folder_uri "[ad_url][join $encoded_uri "/"]"
+    set folder_uri "[ad_conn location][join $encoded_uri "/"]"
     
     # this is wacky, but MS Web Folders usually (but not always)
     # requests a collection without a trailing slash
@@ -1072,12 +1093,18 @@ ns_log debug "\nDAV Revision Copy dest $target_uri parent_id $new_parent_folder_
 	set response [list 201]
     }
 
+    set err_p 0
     db_transaction {
 	set item_id [db_exec_plsql copy_item ""]
 	db_dml set_live_revision ""
     } on_error {
+	set err_p 1
+    }
+
+    if { $err_p } {
 	return [list 500]
     }
+
     tdav::copy_props $uri $target_uri
     return $response
 }
@@ -1129,6 +1156,7 @@ ns_log debug "\nDAV Revision move dest $target_uri parent_id $new_parent_folder_
 	set response [list 201]
     }
 
+    set err_p 0
     db_transaction {
 	if {![string equal $cur_parent_folder_id $new_parent_folder_id]} {
 		db_exec_plsql move_item ""
@@ -1140,8 +1168,13 @@ ns_log debug "\nDAV Revision move dest $target_uri parent_id $new_parent_folder_
 	    db_dml update_title ""
         }
     } on_error {
+	set err_p 1
+    }
+
+    if { $err_p } {
 	return [list 500]
     }
+
     tdav::copy_props $uri $target_uri
     tdav::delete_props $uri
     tdav::remove_lock $uri

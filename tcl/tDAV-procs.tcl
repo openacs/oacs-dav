@@ -388,7 +388,7 @@ proc tdav::check_lock {uri} {
 	    set token ""
 	    # add ? in the token re in case there is a conditional () 
 	    # in the header
-	    regexp {(<http://[^/]+([^>]+)>\s+)?\(<([^>]+)>\)} $hdr nil maybe hdr_uri token
+	    regexp {(<https?://[^/]+([^>]+)>\s+)?\(<([^>]+)>\)} $hdr nil maybe hdr_uri token
 	    
 	    set ftk [lindex $lockinfo 3]
 	    if {![info exists token] || ![string equal $token $ftk]} {
@@ -961,7 +961,7 @@ proc tdav::webdav_mkcol {} {
 proc tdav::filter_webdav_copy {args} {
     set overwrite [tdav::conn -set overwrite [ns_set iget [ns_conn headers] Overwrite]]
     set destination [encoding convertto utf-8 [ns_urldecode [ns_set iget [ns_conn headers] Destination]]]
-    regsub {http://[^/]+/} $destination {/} dest
+    regsub {https?://[^/]+/} $destination {/} dest
     tdav::conn -set destination $dest
     return filter_ok
     
@@ -1019,7 +1019,7 @@ proc tdav::filter_webdav_move {args} {
     set overwrite [tdav::conn -set overwrite [ns_set iget [ns_conn headers] Overwrite]]
     set destination [encoding convertto utf-8 [ns_urldecode [ns_set iget [ns_conn headers] Destination]]]
 
-    regsub {http://[^/]+/} $destination {/} dest
+    regsub {https?://[^/]+/} $destination {/} dest
 
     tdav::conn -set destination $dest
 
@@ -1419,7 +1419,7 @@ proc tdav::respond::propfind { response } {
 	$prop appendChild $supportedlock
 
 	set lockdiscovery [$d createElement D:lockdiscovery]
-	regsub {http://[^/]+/} $href {/} local_uri
+	regsub {https?://[^/]+/} $href {/} local_uri
 	if {[file exists [tdav::get_lock_file $local_uri]]} {
 	    # check for timeout
 	    set lockinfo [tdav::read_lock $local_uri]
