@@ -1,5 +1,14 @@
 <?xml version="1.0"?>
 <queryset>
+
+  <fullquery name="oacs_dav::folder_enabled.enabled_p">
+    <querytext>
+      select enabled_p
+      from dav_site_node_folder_map
+      where folder_id=:folder_id
+    </querytext>
+  </fullquery>
+  
   <fullquery name="oacs_dav::register_folder.add_folder">
     <querytext>
       insert into dav_site_node_folder_map

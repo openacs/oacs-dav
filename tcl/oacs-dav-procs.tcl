@@ -12,6 +12,17 @@ ad_library {
 
 namespace eval oacs_dav {}
 
+ad_proc oacs_dav::folder_enabled {
+    -folder_id
+} {
+    @param folder_id
+
+    @return t if folder is webdav enabled, f if not
+} {
+
+    return [db_string enabled_p "" -default "f"]
+
+}
 
 ad_proc oacs_dav::set_user_id {} {
     set user_id based on authentication header
@@ -243,13 +254,20 @@ ad_proc -public oacs_dav::item_parent_folder_id {
     return $parent_id
 }
 
+ad_proc -public oacs_dav::uri_prefix {
+} {
+    @return URI prefix to use for WebDAV requests
+} {
+    set oacs_dav_package_id [apm_package_id_from_key "oacs-dav"]
+    return [parameter::get -package_id $oacs_dav_package_id -parameter "WebDAV URL Prefix" -default "/dav"]
+}
+
 ad_proc -public oacs_dav::conn_setup {} {
     Setup oacs_dav::conn, authenticate user
 } {
     ad_conn -reset
     set uri [ns_conn url]
-    set oacs_dav_package_id [apm_package_id_from_key "oacs-dav"]
-    set dav_url_regexp "^[parameter::get -package_id $oacs_dav_package_id -parameter "WebDAV URL Prefix" -default "/dav"]"
+    set dav_url_regexp "^[oacs_dav::uri_prefix]"
     set uri [regsub $dav_url_regexp $uri {}]
     oacs_dav::conn -set uri $uri
     set method [ns_conn method]
