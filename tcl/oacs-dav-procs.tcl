@@ -136,14 +136,13 @@ ad_proc oacs_dav::authorize { args } {
 	copy -
 	move {
 	    set authorized_p [expr [permission::permission_p \
-				  -object_id $item_id \
-				  -party_id $user_id \
-				  -privilege "read"] && \
-				  [permission::permission_p \
-				       -object_id [oacs_dav::conn dest_parent_id ] \
-				  -party_id $user_id \
-						       -privilege "create"]]
-			
+                                        -object_id $item_id \
+                                        -party_id $user_id \
+                                        -privilege "read"] \
+                              && [permission::permission_p \
+                                      -object_id [oacs_dav::conn dest_parent_id ] \
+                                      -party_id $user_id \
+                                      -privilege "create"] ]
 	}
 	propfind -
 	get {
@@ -272,7 +271,7 @@ ad_proc -public oacs_dav::conn_setup {} {
     oacs_dav::conn -set uri $uri
     set method [ns_conn method]
     oacs_dav::set_user_id
-    ns_log notice "OACS-DAV conn_setup uri $uri method $method user_id [oacs_dav::conn user_id]"
+    ns_log debug "oacs_dav::conn_setup: uri $uri method $method user_id [oacs_dav::conn user_id]"
     array set sn [oacs_dav::request_site_node $uri]
     set node_id [oacs_dav::conn -set node_id $sn(node_id)]
     set package_id [oacs_dav::conn -set package_id $sn(package_id)]
@@ -280,10 +279,10 @@ ad_proc -public oacs_dav::conn_setup {} {
     set urlv [oacs_dav::conn -set urlv [split [string trimright $uri "/"] "/"]]
 
     if {[catch {[oacs_dav::conn destination]} destination]} {
-	    set destination [oacs_dav::conn -set destination [ns_set iget [ns_conn headers] Destination]]
+        set destination [oacs_dav::conn -set destination [ns_urldecode [ns_set iget [ns_conn headers] Destination]]]
     }
     regsub {http://[^/]+/} $destination {/} dest
-    ns_log notice "DEST = $dest"
+    ns_log debug "oacs_dav::conn_setup destination = $dest"
     regsub $dav_url_regexp $dest {} dest
     oacs_dav::conn -set destination $dest
     if {![empty_string_p $dest]} {
@@ -299,7 +298,7 @@ ad_proc -public oacs_dav::conn_setup {} {
     } else {
 	set parent_url "/"
     }
-    ns_log debug "handle request parent_url $parent_url length urlv [llength $urlv] urlv $urlv"
+    ns_log debug "oacs_dav::conn_setup: handle request parent_url $parent_url length urlv [llength $urlv] urlv $urlv"
     set item_name [lindex $urlv end]
     if {[empty_string_p $item_name]} {
 	# for propget etc we need the name of the folder
@@ -307,16 +306,16 @@ ad_proc -public oacs_dav::conn_setup {} {
 	set item_name [lindex [split [string trimleft $parent_url "/"] "/"] end]
     }
     oacs_dav::conn -set item_name $item_name
-        ns_log debug "handle request parent_url $parent_url length urlv [llength $urlv] urlv $urlv item_name $item_name" 
+        ns_log debug "oacs_dav::conn_setup: handle request parent_url $parent_url length urlv [llength $urlv] urlv $urlv item_name $item_name" 
     set parent_id [oacs_dav::item_parent_folder_id $uri]
 
     set item_id [oacs_dav::conn -set item_id [db_exec_plsql get_item_id ""]]
-    ns_log notice "OACS-DAV uri $uri parent_url $parent_url folder_id $folder_id"
+    ns_log debug "oacs_dav::conn_setup: uri $uri parent_url $parent_url folder_id $folder_id"
     if {[string equal [string trimright $uri "/"] [string trimright $sn(url) "/"]]} {
 	set item_id [oacs_dav::conn -set item_id $folder_id]
     }
 
-    ns_log notice "OACS-DAV setup conn item_id $item_id"
+    ns_log debug "oacs_dav::conn_setup: item_id $item_id"
 }
 
 ad_proc -public oacs_dav::handle_request { uri method args } {
@@ -325,16 +324,16 @@ ad_proc -public oacs_dav::handle_request { uri method args } {
 
     set uri [ns_conn url]
     set method [string tolower [ns_conn method]]
-ns_log debug "oacs_dav::handle_request method=$method uri=$uri"    
+    ns_log debug "oacs_dav::handle_request method=$method uri=$uri"    
     set item_id [oacs_dav::conn item_id]
     set folder_id [oacs_dav::conn folder_id]
     set package_id [oacs_dav::conn package_id]
     set node_id [oacs_dav::conn node_id]
     set package_key [apm_package_key_from_id $package_id]    
 
-    ns_log debug "DAV item_id is $item_id"
+    ns_log debug "oacs_dav::handle_request item_id is $item_id"
     if {[empty_string_p $item_id]} {
-	ns_log debug "DAV: item_id is empty"
+	ns_log debug "oacs_dav::handle_request item_id is empty"
 	# set this to null if nothing exists, only valid on PUT or MKCOL
 	# to create a new item, otherwise we bail
 	# item for URI does not exist
@@ -353,7 +352,7 @@ ns_log debug "oacs_dav::handle_request method=$method uri=$uri"
 		}
 		default {
 		    # return a 404 or other error
-		    ns_log notice "DAV:handle request Item not found method $method URI $uri"
+		    ns_log notice "oacs_dav::handle_request: 404 handle request Item not found method $method URI $uri"
 		    ns_return 404 text/html "File Not Found"
 		    return
 		}
@@ -369,7 +368,7 @@ ns_log debug "oacs_dav::handle_request method=$method uri=$uri"
     # i think we should walk up the object type hierarchy up to
     # content_revision if we don't find an implementation
     # implementation name is content_type
-    
+
     if {![acs_sc_binding_exists_p dav $content_type]} {
 	# go up content_type hierarchy
 	# we do the query here to avoid running the query
@@ -382,16 +381,16 @@ ns_log debug "oacs_dav::handle_request method=$method uri=$uri"
 
     oacs_dav::conn -set content_type $content_type
 
-    # probably should catch this    
+    # probably should catch this
 
     ns_log debug "oacs_dav::handle_request method $method uri $uri item_id $item_id folder_id $folder_id package_id $package_id node_id $node_id content_type $content_type args $args"
 
     set response [acs_sc_call dav $method "" $content_type]
-    
+
     # here the sc impl might return us some data,
     # then we would probably have to send that to tDAV for processing
-    ns_log debug "DAV: response is $response"
-    # no need to produce an XML response for GET so don't
+    ns_log debug "DAV: response is \"$response\""
+
     if {![string equal -nocase "get" $method]} {
 	tdav::respond $response
     }
@@ -754,7 +753,7 @@ ad_proc oacs_dav::impl::content_revision::put {} {
     if {![string equal "unlocked" [tdav::check_lock $uri]]} {
 	return [list 423]
     }
-    
+
     set tmp_filename [oacs_dav::conn tmpfile]
     set tmp_size [file size $tmp_filename]
     # authenticate that user has write privilege
@@ -770,8 +769,8 @@ ad_proc oacs_dav::impl::content_revision::put {} {
 	set response [list 409]
 	return $response
     }
-    
-    ns_log debug "oacs_dav::impl::content_revision::put parent_id=$parent_id item_id=:item_id root_folder_id=:root_folder_id name=$name"
+
+    ns_log debug "oacs_dav::impl::content_revision::put parent_id=$parent_id item_id=$item_id root_folder_id=$root_folder_id name=$name tmp_filename=$tmp_filename"
 
     # create new item if necessary
     db_transaction {
@@ -780,7 +779,7 @@ ad_proc oacs_dav::impl::content_revision::put {} {
 	    # this won't really work very nicely if we support
 	    # abstract url type names... maybe chop off the extension
 	    # when we name the object?
-    
+
 	    set revision_id [cr_import_content \
 				 -storage_type file \
 				 $parent_id \
@@ -802,11 +801,12 @@ ad_proc oacs_dav::impl::content_revision::put {} {
 
 	set response [list 201]
     } on_error {
-	set response [list 500]
+        set response [list 500]
+        ns_log error "oacs_dav::impl::content_revision::put: $errmsg"
     }
 
     # at least we need to return the http_status
-     return $response
+    return $response
 
 }
 

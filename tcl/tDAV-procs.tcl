@@ -358,14 +358,16 @@ proc tdav::check_lock {uri} {
 	    set token ""
 	    # add ? in the token re in case there is a conditional () 
 	    # in the header
-	    regexp {<http://[^/]+([^>]+)>\s+\(<([^>]+)>\)} $hdr nil hdr_uri token
+	    regexp {(<http://[^/]+([^>]+)>\s+)?\(<([^>]+)>\)} $hdr nil maybe hdr_uri token
 	    set ftk [lindex [tdav::read_lock $uri] 3]
 
-	    if {![string equal $token $ftk]} {
+	    if {![info exists token] || ![string equal $token $ftk]} {
+                ns_log Debug "tdav::check_lock: token mismatch $ftk expected hdr: $hdr token: $token"
 		ns_return 423 {text/plain} {}
 		return filter_return
 	    }
 	} else {
+            ns_log Debug "tdav::check_lock: no \"If\" header found for request of $uri"
 	    ns_return 423 {text/plain} {}
 	    return filter_return
 	}
@@ -928,7 +930,7 @@ proc tdav::webdav_mkcol {} {
 
 proc tdav::filter_webdav_copy {args} {
     set overwrite [tdav::conn -set overwrite [ns_set iget [ns_conn headers] Overwrite]]
-    set destination [encoding convertto utf-8 [ns_set iget [ns_conn headers] Destination]]
+    set destination [encoding convertto utf-8 [ns_urldecode [ns_set iget [ns_conn headers] Destination]]]
     regsub {http://[^/]+/} $destination {/} dest
     tdav::conn -set destination $dest ]
     return filter_ok
@@ -985,7 +987,7 @@ proc tdav::webdav_copy {} {
 
 proc tdav::filter_webdav_move {args} {
     set overwrite [tdav::conn -set overwrite [ns_set iget [ns_conn headers] Overwrite]]
-    set destination [encoding convertto utf-8 [ns_set iget [ns_conn headers] Destination]]
+    set destination [encoding convertto utf-8 [ns_urldecode [ns_set iget [ns_conn headers] Destination]]]
 
     regsub {http://[^/]+/} $destination {/} dest
 
