@@ -21,7 +21,7 @@
             <callback type="before-uninstall"  proc="oacs_dav::install::package_uninstall"/>
         </callbacks>
         <parameters>
-            <parameter datatype="string"  min_n_values="1"  max_n_values="1"  name="WebDAV URL Prefix"  default="/dav" description="Prefix to be added to the urls for WebDAV requests."/>
+            <parameter datatype="string"  min_n_values="1"  max_n_values="1"  name="WebDAVURLPrefix"  default="/dav" description="Prefix to be added to the urls for WebDAV requests."/>
         </parameters>
 
     </version>
