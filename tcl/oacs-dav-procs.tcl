@@ -633,9 +633,6 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
     set depth [oacs_dav::conn depth]
     set folder_uri [ad_url][ad_conn url]
     # if client didn't put a / on folder_uri go ahead and tack it on
-    if {![string match */ $folder_uri]} {
-	append folder_uri "/"
-    }
     if {[empty_string_p $depth]} {
 	set depth 0
     }
@@ -655,6 +652,8 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
 	ns_log debug "DAVEB item_id $item_id folder_id $folder_id $item_uri"
 	if {$item_id == $folder_id} {
 	    set item_uri ""
+	} else {
+	    set item_uri "/${item_uri}"
 	}
 	
 	lappend properties [list "D" "getcontenttype"] $mime_type
