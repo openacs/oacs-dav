@@ -147,7 +147,7 @@
   <fullquery name="oacs_dav::impl::content_folder::move.rename_folder">
     <querytext>
 	begin
-	      content_folder.rename (
+	      content_folder.edit_name (
 	              folder_id => :move_folder_id,
 	              name => :new_name,
 	              label => :new_name,
@@ -173,7 +173,7 @@
       name="oacs_dav::impl::content_revision::move.rename_item">
     <querytext>
 	begin
-	      content_item.rename (
+	      content_item.edit_name (
 	              item_id => :item_id,
 	              name => :new_name
 	      );
