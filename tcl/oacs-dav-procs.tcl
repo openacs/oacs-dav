@@ -391,7 +391,9 @@ ad_proc -public oacs_dav::handle_request { uri method args } {
     # then we would probably have to send that to tDAV for processing
     ns_log debug "DAV: response is \"$response\""
 
-    if {![string equal -nocase "get" $method]} {
+    if {![string equal -nocase "get" $method] && \
+	    ![string equal -nocase "head" $method]} {
+
 	tdav::respond $response
     }
 }
@@ -738,6 +740,21 @@ ad_proc oacs_dav::impl::content_revision::get {} {
     #should return the DAV content for the content item
     #for now we always get live/latest revision
 
+    cr_write_content -item_id $item_id
+}
+
+ad_proc oacs_dav::impl::content_revision::head {} {
+    GET DAV method for generic content revision
+    @author Dave Bauer
+    @param uri
+} {
+
+    set item_id [oacs_dav::conn item_id]
+
+    # cr_write_content works correctly for HEAD requests
+    # with filesystem storage, it sends out the content
+    # on lob storage. that needs to be fixed.
+    
     cr_write_content -item_id $item_id
 }
 

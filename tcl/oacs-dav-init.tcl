@@ -18,6 +18,7 @@ set prefix [parameter::get \
 set url "${prefix}/*"
 set filter_url "${prefix}*"
 ns_register_filter preauth GET ${filter_url} oacs_dav::authorize
+ns_register_filter preauth HEAD ${filter_url} oacs_dav::authorize
 ns_register_filter preauth PUT ${filter_url} oacs_dav::authorize
 ns_register_filter preauth MKCOL ${filter_url} oacs_dav::authorize
 ns_register_filter preauth COPY ${filter_url} oacs_dav::authorize
@@ -31,6 +32,7 @@ ns_register_filter preauth UNLOCK ${filter_url} oacs_dav::authorize
 ns_log notice "OACS-DAV preauth filters loaded on $filter_url"
 
 ns_register_proc GET ${url} oacs_dav::handle_request
+ns_register_proc HEAD ${url} oacs_dav::handle_request
 ns_register_proc COPY ${url} oacs_dav::handle_request
 ns_register_proc PUT ${url} oacs_dav::handle_request
 ns_register_proc DELETE ${url} oacs_dav::handle_request
