@@ -1140,7 +1140,7 @@ proc tdav::webdav_lock {} {
 	    #probably make this a paramter?
 	    set timeout 180
 	}
-	if {![empty_string_p $existing_lock_token] && [file exists [tdav::get_lock_file $uri]} {
+	if {![string equal "" $existing_lock_token] && [file exists [tdav::get_lock_file $uri]} {
 	    
 	    set old_lock [tdav::read_lock $uri]
 	    set new_lock [list [lindex $old_lock 0] [lindex $old_lock 1] [lindex $old_lock 2] [lindex $old_lock 3] $timeout [clock format [clock seconds]]]
@@ -1635,7 +1635,7 @@ if {![nsv_exists tdav_filters_installed filters_installed]} {
 #     ns_perm addgroup tdav tdav tdav1
 
     set tdav_shares [ns_configsection "ns/server/[ns_info server]/tdav/shares"]
-    if { ![empty_string_p $tdav_shares] } {
+    if { ![string equal "" $tdav_shares] } {
         for {set i 0} {$i < [ns_set size $tdav_shares]} {incr i} {
             set tdav_share [ns_configsection "ns/server/[ns_info server]/tdav/share/[ns_set key $tdav_shares $i]"] 
             tdav::apply_filters [ns_set get $tdav_share uri] [ns_set get $tdav_share options]
