@@ -8,6 +8,20 @@
     </querytext>
   </fullquery>
 
+  <fullquery name="oacs_dav::children_have_permission_p.child_perms">
+    <querytext>
+            select count(*)
+            from cr_items c1, cr_items c2
+            where c2.item_id = :item_id
+            and c1.tree_sortkey between c2.tree_sortkey and tree_right(c2.tree_sortkey)
+            and not  exists (select 1
+                   from acs_object_party_privilege_map m
+                   where m.object_id = cr_items.item_id
+                     and m.party_id = :user_id
+                     and m.privilege = :privilege)
+    </querytext>
+  </fullquery>
+ 
   <fullquery
     name="oacs_dav::impl::content_folder::propfind.get_properties">
     <querytext>
@@ -45,7 +59,7 @@
 	ci.name,
 	content_item__get_path(ci.item_id,:folder_id) as item_uri,
 	coalesce(cr.mime_type,'*/*') as mime_type,
-	cr.content_length,
+	coalesce(cr.content_length,0) as content_length,
 	to_char(timezone('GMT',o.creation_date) :: timestamptz ,'YYYY-MM-DD"T"HH:MM:SS.MS"Z"') as creation_date,
 	to_char(timezone('GMT',o.last_modified) :: timestamptz ,'Dy, DD Mon YYYY HH:MM:SS TZ') as last_modified
       from cr_items ci,
@@ -92,6 +106,24 @@
     </querytext>
   </fullquery>
 
+    <fullquery name="oacs_dav::impl::content_folder::copy.update_child_revisions">
+      <querytext>
+	update cr_items 
+	set live_revision = latest_revision
+	where exists (
+		select 1 
+		from
+		(select ci1.item_id as child_item_id 
+                from cr_items ci1, cr_items ci2
+		where ci2.item_id=:new_folder_id
+	        and ci1.tree_sortkey 
+	        between ci2.tree_sortkey and tree_right(ci2.tree_sortkey)
+                ) children 
+                where item_id=children.child_item_id 
+                      )
+      </querytext>
+    </fullquery>
+
   <fullquery name="oacs_dav::impl::content_folder::move.move_folder">
     <querytext>
       select content_folder__move (
@@ -107,7 +139,7 @@
       select content_folder__rename (
       :move_folder_id,
       :new_name,
-      NULL,
+      :new_name,
       NULL
       )
     </querytext>
