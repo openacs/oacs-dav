@@ -1099,7 +1099,7 @@ proc tdav::filter_webdav_lock {args} {
 proc tdav::set_lock {uri depth type scope owner {timeout "180"} } {
 
     set token "opaquelocktoken:[ns_rand 2147483647]"
-    set lock [list $type $scope $owner $token $timeout]
+    set lock [list $type $scope $owner $token $timeout $depth]
     tdav::write_lock $uri $lock
     return $token
 
@@ -1130,10 +1130,10 @@ proc tdav::webdav_lock {} {
 	if {![empty_string_p $existing_lock_token] && [file exists [tdav::get_lock_file $uri]} {
 	    
 	    set old_lock [tdav::read_lock $uri]
-	    set new_lock [list [lindex $old_lock 0] [lindex $old_lock 1] [lindex $old_lock 2] [lindex $old_lock 3] $timeout]
+	    set new_lock [list [lindex $old_lock 0] [lindex $old_lock 1] [lindex $old_lock 2] [lindex $old_lock 3] $timeout $depth]
 	    tdav::write_lock $uri $new_lock
 	} else {
-	    set token [tdav::set_lock $uri $depth $type $scope $owner]
+	    set token [tdav::set_lock $uri $depth $type $scope $owner $depth]
 	}
 	set ret_code 200
 
@@ -1407,6 +1407,38 @@ proc tdav::respond::propfind { response } {
 
 	$prop appendChild $supportedlock
 
+	set lockdiscovery [$d createElement D:lockdiscovery]
+	regsub {http://[^/]+/} $href {/} local_uri
+	if {[file exists [tdav::get_lock_file $local_uri]]} {
+	    set lockinfo [tdav::read_lock $local_uri]
+	    set activelock [$d createElement D:activelock]
+	    set locktype [$d createElement D:locktype]
+	    set lockscope [$d createElement D:lockscope]
+	    set depth [$d createElement D:depth]
+	    set owner [$d createElement D:owner]
+	    set timeout [$d createElement D:timeout]
+	    set locktoken [$d createElement D:locktoken]
+	    set locktokenhref [$d createElement D:href]
+	    
+	    $locktype appendChild [$d createElement D:[lindex $lockinfo 0]]
+	    $lockscope appendChild [$d createElement D:[lindex $lockinfo 1]]
+	    $depth appendChild [$d createTextNode [lindex $lockinfo 5]]
+	    $timeout appendChild [$d createTextNode Second-[lindex $lockinfo 4]]
+	    $owner appendChild [$d createTextNode [lindex $lockinfo 2]]
+	    $locktokenhref appendChild [$d createTextNode [lindex $lockinfo 3]]
+	    $locktoken appendChild $locktokenhref
+
+	    $activelock appendChild $locktype
+	    $activelock appendChild $lockscope
+	    $activelock appendChild $depth
+	    $activelock appendChild $timeout
+	    $activelock appendChild $owner
+	    $activelock appendChild $locktoken
+
+	    $lockdiscovery appendChild $activelock
+	}
+
+	$prop appendChild $lockdiscovery
 	$propstat appendChild $prop	
 
 	set status [$d createElement D:status]
@@ -1416,7 +1448,7 @@ proc tdav::respond::propfind { response } {
 	$propstat appendChild $status
 
 
-    }
+	}
     
 
     set body [$d asXML -escapeNonASCII]
