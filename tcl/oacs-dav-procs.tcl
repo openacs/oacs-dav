@@ -268,7 +268,7 @@ ad_proc -public oacs_dav::conn_setup {} {
     ad_conn -reset
     set uri [ns_conn url]
     set dav_url_regexp "^[oacs_dav::uri_prefix]"
-    set uri [regsub $dav_url_regexp $uri {}]
+    regsub $dav_url_regexp $uri {} uri
     oacs_dav::conn -set uri $uri
     set method [ns_conn method]
     oacs_dav::set_user_id
@@ -284,7 +284,7 @@ ad_proc -public oacs_dav::conn_setup {} {
     }
     regsub {http://[^/]+/} $destination {/} dest
     ns_log notice "DEST = $dest"
-    set dest [regsub $dav_url_regexp $dest {}]
+    regsub $dav_url_regexp $dest {} dest
     oacs_dav::conn -set destination $dest
     if {![empty_string_p $dest]} {
 	oacs_dav::conn -set dest_parent_id [oacs_dav::item_parent_folder_id $dest]
