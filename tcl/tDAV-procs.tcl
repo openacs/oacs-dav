@@ -295,12 +295,14 @@ proc tdav::dbm_read_list {uri} {
 
 proc tdav::read_lock {uri} {
     set f [open [tdav::get_lock_file $uri] {CREAT RDONLY}]
-    file start $[tdav::get_lock_file $uri] file_info
-    set t $file_info(mtime)
     set s [read $f]
     set e "list ${s}"
     set l [eval $e]
+    close $f
 
+    file stat [tdav::get_lock_file $uri] file_info
+    set t $file_info(mtime)    
+   
     return $l
 }
 
@@ -371,7 +373,6 @@ proc tdav::check_lock {uri} {
        set lockinfo [tdav::read_lock $uri]
 
 	set hdr [ns_set iget [ns_conn headers] If]
-
 	
 	# the If header exists, work, otherwise 423
 	
@@ -382,7 +383,6 @@ proc tdav::check_lock {uri} {
 	    regexp {(<http://[^/]+([^>]+)>\s+)?\(<([^>]+)>\)} $hdr nil maybe hdr_uri token
 	    
 	    set ftk [lindex $lockinfo 3]
-	    
 	    if {![info exists token] || ![string equal $token $ftk]} {
                 ns_log Debug "tdav::check_lock: token mismatch $ftk expected hdr: $hdr token: $token"
 		ns_return 423 {text/plain} {}
@@ -954,7 +954,7 @@ proc tdav::filter_webdav_copy {args} {
     set overwrite [tdav::conn -set overwrite [ns_set iget [ns_conn headers] Overwrite]]
     set destination [encoding convertto utf-8 [ns_urldecode [ns_set iget [ns_conn headers] Destination]]]
     regsub {http://[^/]+/} $destination {/} dest
-    tdav::conn -set destination $dest ]
+    tdav::conn -set destination $dest
     return filter_ok
     
 }
@@ -1081,6 +1081,7 @@ proc tdav::filter_webdav_lock {args} {
     }
     set depth [ns_set iget [ns_conn headers] Depth]
     set timeout [ns_set iget [ns_conn headers] Timeout]
+    regsub {^Second-} $timeout {} timeout
     tdav::conn -set lock_timeout $timeout
      if {![string length $depth]} {
 	set depth 0
@@ -1095,7 +1096,7 @@ proc tdav::filter_webdav_lock {args} {
     return filter_ok
 }
 
-proc tdav::set_lock {uri depth type scope owner timeout} {
+proc tdav::set_lock {uri depth type scope owner {timeout "180"} } {
 
     set token "opaquelocktoken:[ns_rand 2147483647]"
     set lock [list $type $scope $owner $token $timeout]
@@ -1126,7 +1127,7 @@ proc tdav::webdav_lock {} {
 	    #probably make this a paramter?
 	    set timeout 180
 	}
-	if {![empty_string_p $existing_lock_token]} {
+	if {![empty_string_p $existing_lock_token] && [file exists [tdav::get_lock_file $uri]} {
 	    
 	    set old_lock [tdav::read_lock $uri]
 	    set new_lock [list [lindex $old_lock 0] [lindex $old_lock 1] [lindex $old_lock 2] [lindex $old_lock 3] $timeout]
@@ -1135,6 +1136,7 @@ proc tdav::webdav_lock {} {
 	    set token [tdav::set_lock $uri $depth $type $scope $owner]
 	}
 	set ret_code 200
+
 	tdav::respond [list $ret_code [list depth $depth token $token timeout $timeout owner $owner scope $scope type $type]]
     }
 }
@@ -1221,7 +1223,7 @@ proc tdav::respond::delete { response } {
 proc tdav::respond::lock { response } {
     array set lock [lindex $response 1]
     if {[string equal "" $lock(timeout)]} {
-	set timeout 3600
+	set lock(timeout) 300
     }
     set body [subst {<?xml version="1.0" encoding="utf-8"?>
 	<prop xmlns="DAV:">

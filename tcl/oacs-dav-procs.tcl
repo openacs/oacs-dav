@@ -330,13 +330,14 @@ ad_proc -public oacs_dav::conn_setup {} {
     set folder_id [oacs_dav::conn -set folder_id [oacs_dav::request_folder_id [oacs_dav::conn node_id]]]
     set urlv [oacs_dav::conn -set urlv [split [string trimright $uri "/"] "/"]]
 
-    if {[catch {[oacs_dav::conn destination]} destination]} {
-        set destination [oacs_dav::conn -set destination [ns_urldecode [ns_set iget [ns_conn headers] Destination]]]
-    }
+    set destination [ns_urldecode [ns_set iget [ns_conn headers] Destination]]
+
     regsub {http://[^/]+/} $destination {/} dest
-    ns_log debug "\noacs_dav::conn_setup destination = $dest"
-    regsub $dav_url_regexp $dest {} dest
-    oacs_dav::conn -set destination $dest
+
+     regsub $dav_url_regexp $dest {} dest
+
+    oacs_dav::conn -set oacs_destination $dest
+ 
     if {![empty_string_p $dest]} {
 	oacs_dav::conn -set dest_parent_id [oacs_dav::item_parent_folder_id $dest]
     }
@@ -374,7 +375,7 @@ ad_proc -public oacs_dav::handle_request { uri method args } {
     dispatch request to the proper service contract implmentation
 } {
 
-    set uri [ns_conn url]
+    set uri [oacs_dav::conn uri]
     set method [string tolower [ns_conn method]]
     ns_log debug "\noacs_dav::handle_request method=$method uri=$uri"    
     set item_id [oacs_dav::conn item_id]
@@ -543,7 +544,7 @@ ad_proc oacs_dav::impl::content_folder::copy {} {
     set peer_addr [oacs_dav::conn peeraddr]
     set copy_folder_id [oacs_dav::conn item_id]
     set overwrite [oacs_dav::conn overwrite]
-    set target_uri [oacs_dav::conn destination]
+    set target_uri [oacs_dav::conn oacs_destination]
     set new_parent_folder_id [oacs_dav::conn dest_parent_id]
     set durlv [split [string trimright $target_uri "/"] "/"]
     set new_name [lindex $durlv end]
@@ -595,7 +596,7 @@ ad_proc oacs_dav::impl::content_folder::move {} {
     set user_id [oacs_dav::conn user_id]
     set peer_addr [oacs_dav::conn peeraddr]
     set uri [oacs_dav::conn uri]
-    set target_uri [oacs_dav::conn destination]
+    set target_uri [oacs_dav::conn oacs_destination]
     set move_folder_id [oacs_dav::conn item_id]
     set item_name [oacs_dav::conn item_name]
     set new_parent_folder_id [oacs_dav::conn dest_parent_id]
@@ -603,6 +604,10 @@ ad_proc oacs_dav::impl::content_folder::move {} {
     set turlv [split [string trimright $target_uri "/"] "/"]
     set new_name [lindex $turlv end]
     set overwrite [oacs_dav::conn overwrite]
+
+    if {![string equal "unlocked" [tdav::check_lock $uri]]} {
+	return [list 423]
+    }
     
     if {[empty_string_p $new_parent_folder_id]} {
         set response [list 412]
@@ -611,6 +616,7 @@ ad_proc oacs_dav::impl::content_folder::move {} {
 
     set dest_item_id [db_string get_dest_id "" -default ""]
     ns_log debug "\n@DAV@@ folder move new_name $new_name dest_id $dest_item_id new_folder_id $new_parent_folder_id \n" 
+
     if {![empty_string_p $dest_item_id]} {
 
 	if {![string equal -nocase $overwrite "T"]} {
@@ -791,9 +797,13 @@ ad_proc oacs_dav::impl::content_folder::lock {} {
 	set response [list $ret_code]
     } else {
 	set depth [tdav::conn depth]
-	set token [tdav::set_lock $uri $depth $type $scope $owner]
+	set timeout [tdav::conn lock_timeout]
+	if {[empty_string_p $timeout]} {
+	    set timeout 300
+	}
+	set token [tdav::set_lock $uri $depth $type $scope $owner $timeout]
 	set ret_code 200
-	set response [list $ret_code [list depth $depth token $token timeout "" owner $owner scope $scope type $type]]
+	set response [list $ret_code [list depth $depth token $token timeout $timeout owner $owner scope $scope type $type]]
     }
     return $response
 }
@@ -1010,7 +1020,7 @@ ad_proc oacs_dav::impl::content_revision::copy {} {
     set peer_addr [oacs_dav::conn peeraddr]
     set uri [oacs_dav::conn uri]
     # check for write permission on target folder
-    set target_uri [oacs_dav::conn destination]
+    set target_uri [oacs_dav::conn oacs_destination]
     set copy_item_id [oacs_dav::conn item_id]
     set overwrite [oacs_dav::conn overwrite]
     set turlv [split $target_uri "/"]
@@ -1065,8 +1075,8 @@ ad_proc oacs_dav::impl::content_revision::move {} {
     set peer_addr [oacs_dav::conn peeraddr]
     set item_id [oacs_dav::conn item_id]
     set item_name [oacs_dav::conn item_name]
-    set uri [tdav::conn url]
-    set target_uri [oacs_dav::conn destination]
+    set uri [oacs_dav::conn uri]
+    set target_uri [oacs_dav::conn oacs_destination]
     set cur_parent_folder_id [oacs_dav::conn folder_id]
     set new_parent_folder_id [oacs_dav::conn dest_parent_id]
     set turlv [split $target_uri "/"]
@@ -1075,6 +1085,7 @@ ad_proc oacs_dav::impl::content_revision::move {} {
     if {[empty_string_p $new_parent_folder_id]} {
 	return [list 409]
     }
+
     if {![string equal "unlocked" [tdav::check_lock $uri]]} {
 	return [list 423]
     }
@@ -1141,9 +1152,13 @@ ad_proc oacs_dav::impl::content_revision::lock {} {
 	set response [list $ret_code]
     } else {
 	set depth [tdav::conn depth]
-	set token [tdav::set_lock $uri $depth $type $scope $owner]
+	set timeout [tdav::conn lock_timeout]
+	if {[empty_string_p $timeout]} {
+	    set timeout 300
+	}
+	set token [tdav::set_lock $uri $depth $type $scope $owner $timeout]
 	set ret_code 200
-	set response [list $ret_code [list depth $depth token $token timeout "" owner $owner scope $scope type $type]]
+	set response [list $ret_code [list depth $depth token $token timeout $timeout owner $owner scope $scope type $type]]
     }
     return $response
 }
