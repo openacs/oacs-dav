@@ -307,7 +307,7 @@ ad_proc -public oacs_dav::conn_setup {} {
 
     set destination [ns_urldecode [ns_set iget [ns_conn headers] Destination]]
 
-    regsub {http://[^/]+/} $destination {/} dest
+    regsub {(http|https)://[^/]+/} $destination {/} dest
 
      regsub $dav_url_regexp $dest {} dest
 
