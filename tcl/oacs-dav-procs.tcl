@@ -259,7 +259,7 @@ ad_proc -public oacs_dav::uri_prefix {
     @return URI prefix to use for WebDAV requests
 } {
     set oacs_dav_package_id [apm_package_id_from_key "oacs-dav"]
-    return [parameter::get -package_id $oacs_dav_package_id -parameter "WebDAV URL Prefix" -default "/dav"]
+    return [parameter::get -package_id $oacs_dav_package_id -parameter "WebDAVURLPrefix" -default "/dav"]
 }
 
 ad_proc -public oacs_dav::conn_setup {} {
