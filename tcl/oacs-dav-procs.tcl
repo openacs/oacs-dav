@@ -182,7 +182,7 @@ ad_proc oacs_dav::authorize { args } {
                                       -privilege "create"] ]
 	}
 	propfind {
-	    if {!$user_id} {
+	    if {!$user_id && [parameter::get -parameter RequireAuthForPropfind -package_id [apm_package_id_from_key oacs-dav] -default "1"]} {
 		ns_returnunauthorized
 	    } else {
 		set authorized_p [permission::permission_p \
