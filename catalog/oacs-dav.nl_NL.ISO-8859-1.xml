@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<message_catalog package_key="oacs-dav" package_version="0.6d" locale="nl_NL" charset="ISO-8859-1">
+<message_catalog package_key="oacs-dav" package_version="0.10d" locale="nl_NL" charset="ISO-8859-1">
 
   <msg key="Disable">Uitschakelen</msg>
   <msg key="Disable_Folders">Geselecteerde mappen uitschakelen</msg>
@@ -11,8 +11,8 @@
   <msg key="Folder_URL">Map-URL</msg>
   <msg key="Folders_Disabled">WebDAV ondersteuning voor geselecteerde mappen is uitgeschakeld</msg>
   <msg key="Folders_Enabled">WebDAV ondersteuning voor geselecteerde mappen is ingeschakeld</msg>
-  <msg key="Package_Name">Pakketnaam</msg>
-  <msg key="Package_Type">Pakketaard</msg>
+  <msg key="Package_Name">Modulenaam</msg>
+  <msg key="Package_Type">Moduletype</msg>
   <msg key="Status">Status</msg>
   <msg key="WebDAV_Folder_Administration">Administratie WebDAV mappen</msg>
 </message_catalog>
