@@ -26,16 +26,17 @@
 	as collection_p
       from (
 		select * from cr_items
-		where parent_id=:folder_id
-		or item_id=:folder_id
-	--	connect by prior item_id=parent_id
-	--	start with item_id=:folder_id
+		where (parent_id=:folder_id
+		or item_id=:folder_id)
+		and level <= :depth + 1
+		connect by prior item_id=parent_id
+		start with item_id=:folder_id
 	) ci1,
       cr_revisions cr, 
       acs_objects o
      where 
-      ci1.item_id=o.object_id and
-      ci1.live_revision = cr.revision_id(+)
+      ci1.item_id=o.object_id 
+     and ci1.live_revision = cr.revision_id(+)
      and exists (select 1
                   from acs_object_party_privilege_map m
                   where m.object_id = ci1.item_id
