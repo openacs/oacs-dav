@@ -12,6 +12,21 @@
     </querytext>
   </fullquery>
 
+  <fullquery name="oacs_dav::children_have_permission_p.child_perms">
+    <querytext>
+            select count(*)
+            from (select item_id 
+                  from cr_items
+	          connect by prior item_id = parent_id
+	          start with item_id = :item_id)
+            where not  exists (select 1
+                   from acs_object_party_privilege_map m
+                   where m.object_id = cr_items.item_id
+                     and m.party_id = :user_id
+                     and m.privilege = :privilege)
+    </querytext>
+  </fullquery>
+
   <fullquery
     name="oacs_dav::impl::content_folder::propfind.get_properties">
     <querytext>
@@ -100,6 +115,23 @@
     </querytext>
   </fullquery>
 
+    <fullquery name="oacs_dav::impl::content_folder::copy.update_child_revisions">
+      <querytext>
+	update cr_items 
+	set live_revision=latest_revision
+	where exists (
+		select 1 
+		from
+		(select ci1.item_id as child_item_id 
+                from cr_items ci1
+	        connect by prior item_id = parent_id
+                start with item_id = :folder_id
+                ) children 
+                where item_id=children.child_item_id 
+                      )
+      </querytext>
+    </fullquery>
+
   <fullquery name="oacs_dav::impl::content_folder::move.move_folder">
     <querytext>
 	begin
@@ -118,7 +150,7 @@
 	      content_folder.rename (
 	              folder_id => :move_folder_id,
 	              name => :new_name,
-	              label => NULL,
+	              label => :new_name,
 	              description => NULL
 	      );
 	end;

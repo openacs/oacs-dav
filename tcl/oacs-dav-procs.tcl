@@ -182,7 +182,7 @@ ad_proc oacs_dav::authorize { args } {
                                       -privilege "create"] ]
 	}
 	propfind {
-	    if {!$user_id && [parameter::get -parameter RequireAuthForPropfind -package_id [apm_package_id_from_key oacs-dav] -default "1"]} {
+	    if {!$user_id} {
 		ns_returnunauthorized
 	    } else {
 		set authorized_p [permission::permission_p \
@@ -369,6 +369,26 @@ ad_proc -public oacs_dav::conn_setup {} {
     }
 
     ns_log debug "\noacs_dav::conn_setup: item_id $item_id"
+}
+
+ad_proc -public oacs_dav::children_have_permission_p {
+    -user_id
+    -item_id
+    -privilege
+} {
+    Check permission on child items of item_id for user_id with privilege
+    @param user_id
+    @param item_id
+    @param privilege 
+
+    @return retursn 0 if user does not have privilege over all childern otherwise return 1
+} {
+    set child_count [db_string child_perms ""]
+    ns_log notice "\n ----- \n oacs_dav::children_have_permission_p \n child_count = $child_count \n ----- \n"
+    incr child_count [db_string revision_perms ""]
+    ns_log notice "\n ----- \n oacs_dav::children_have_permission_p \n child_count = $child_count \n ----- \n"
+    ns_log notice "\n ----- \n oacs_dav::children_have_permission_p \n return [expr $child_count == 0] \n ----- \n"
+    return [expr $child_count == 0]
 }
 
 ad_proc -public oacs_dav::handle_request { uri method args } {
@@ -570,6 +590,10 @@ ad_proc oacs_dav::impl::content_folder::copy {} {
 	} 
 	# according to the spec copy with overwrite means
         # delete then copy
+	set blocked_p [oacs_dav::children_have_permission_p -item_id $copy_folder_id -user_id $user_id -privilege "delete"]
+	if {$blocked_p} {
+	    return [list 409]
+	}
 	if {![string equal "unlocked" [tdav::check_lock $target_uri]]} {
 	    return [list 423]
 	}
@@ -581,6 +605,11 @@ ad_proc oacs_dav::impl::content_folder::copy {} {
     }
     db_transaction {
 	db_exec_plsql copy_folder ""
+	# we need to do this because in oracle content_folder__copy
+	# is a procedure and does not return the new folder_id
+	set new_folder_id [db_string get_new_folder_id ""]
+	# update all child items revisions to live revision
+	db_dml update_child_revisions "" 
     } on_error {
 	return [list 500]
     }
@@ -627,12 +656,16 @@ ad_proc oacs_dav::impl::content_folder::move {} {
 		      -privilege "write"]} {
 	    ns_returnunauthorized
 	}
-	# according to the spec copy with overwrite means
-        # delete then copy
+	# according to the spec move with overwrite means
+        # delete then move
 	if {![string equal "unlocked" [tdav::check_lock $target_uri]]} {
 	    return [list 423]
 	}
-
+	# TODO check if we have permission over everything inside
+	set blocked_p [oacs_dav::children_have_permission_p -item_id $move_folder_id -user_id $user_id -privilege "delete"]
+	if {$blocked_p} {
+	    return [list 409]
+	}
         db_exec_plsql delete_for_move ""
 	set response [list 204]
 	ns_log debug "\n ----- \n  CONTENT_FOLDER::MOVE OVERWRITING RETURNING 204  \n ----- \n"
@@ -651,6 +684,10 @@ ad_proc oacs_dav::impl::content_folder::move {} {
 	if {![string equal $cur_parent_folder_id $new_parent_folder_id]} {
 	    ns_log debug "\n@@DAV@@ move folder $move_folder_id"
 	    db_exec_plsql move_folder ""
+	    # change label if name is different
+	    if {![string equal $new_name $item_name]} {
+		db_dml update_label ""
+	    }
 	} elseif {![empty_string_p $new_name]} {
 	    ns_log debug "\n@@DAV@@ move folder rename $move_folder_id to $new_name"
 	    db_exec_plsql rename_folder ""
@@ -677,6 +714,10 @@ ad_proc oacs_dav::impl::content_folder::delete {} {
     if {![string equal "unlocked" [tdav::check_lock $uri]]} {
 	return [list 423]
     }
+    set blocked_p [oacs_dav::children_have_permission_p -item_id $item_id -user_id $user_id -privilege "delete"]
+	if {$blocked_p} {
+	    return [list 403]
+	}
     if {[catch {db_exec_plsql delete_folder ""} errmsg]} {
 	ns_log error "content_folder::delete $errmsg"
 	set response [list 500]
@@ -840,6 +881,7 @@ ad_proc oacs_dav::impl::content_revision::get {} {
     #for now we always get live/latest revision
 
     cr_write_content -item_id $item_id
+
 }
 
 ad_proc oacs_dav::impl::content_revision::head {} {
@@ -1115,9 +1157,13 @@ ns_log debug "\nDAV Revision move dest $target_uri parent_id $new_parent_folder_
     db_transaction {
 	if {![string equal $cur_parent_folder_id $new_parent_folder_id]} {
 		db_exec_plsql move_item ""
+
 	} elseif {![empty_string_p $new_name] } {
 	    db_exec_plsql rename_item ""
 	}
+       if {![string equal $item_name $new_name]} {
+	    db_dml update_title ""
+        }
     } on_error {
 	return [list 500]
     }
