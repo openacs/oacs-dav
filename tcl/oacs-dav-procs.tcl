@@ -631,8 +631,16 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
 } {
     set user_id [oacs_dav::conn user_id]
     set depth [oacs_dav::conn depth]
-    set folder_uri [ad_url][ad_conn url]
-    # if client didn't put a / on folder_uri go ahead and tack it on
+    set encoded_uri [list]
+    foreach fragment [split [ad_conn url] "/"] {
+    	lappend encoded_uri [ns_urlencode $fragment]
+    }   
+    set folder_uri "[ad_url][join $encoded_uri "/"]"
+    
+   if {![string match */ $folder_uri]} {
+	append folder_uri "/"
+    }
+
     if {[empty_string_p $depth]} {
 	set depth 0
     }
@@ -656,7 +664,12 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
 	if {$item_id == $folder_id} {
 	    set item_uri ""
 	} else {
-	    set item_uri "/${item_uri}"
+	    set encoded_uri [list]
+	    foreach fragment [split $item_uri "/"] {
+		lappend encoded_uri [ns_urlencode $fragment]
+	    }
+	    set item_uri "[join $encoded_uri "/"]"
+	  
 	}
 	
 	lappend properties [list "D" "getcontenttype"] $mime_type
