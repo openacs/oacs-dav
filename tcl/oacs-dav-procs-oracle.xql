@@ -15,7 +15,7 @@
   <fullquery
     name="oacs_dav::impl::content_folder::propfind.get_properties">
     <querytext>
-      select nvl (cr.content_length,4096) as content_length,
+      select nvl (cr.content_length,0) as content_length,
 	nvl (cr.mime_type,'*/*') as mime_type,
 	to_char(o.creation_date, 'YYYY-MM-DD"T"HH:MI:SS."00Z"') as creation_date,
 	to_char(o.last_modified, 'DY, DD MON YYYY HH:MI:SS "GMT"') as last_modified,
