@@ -43,7 +43,7 @@ aa_register_case oacs_dav_put {
 	    set item_id ""
 	    oacs_dav::conn -set method "PUT"
 	    oacs_dav::conn -set item_id $item_id
-	    oacs_dav::conn -set url $uri
+	    oacs_dav::conn -set uri $uri
 	    oacs_dav::conn -set urlv $name
 	    oacs_dav::conn -set tmpfile "[acs_root_dir]/packages/oacs-dav/tcl/test/$name"
 	    # we probably want to create a bunch of files in the filesystem
@@ -82,7 +82,7 @@ aa_register_case oacs_dav_mkcol {
 	    set name "__test_folder1/__test_folder2"
 	    set uri "/"
             oacs_dav::conn -set item_id ""
-	    oacs_dav::conn -set url $uri
+	    oacs_dav::conn -set uri $uri
 	    oacs_dav::conn -set extra_url $name
 	    oacs_dav::conn -set urlv [split $uri "/"]
 	    oacs_dav::conn -set package_id $package_id
@@ -92,7 +92,7 @@ aa_register_case oacs_dav_mkcol {
 	    foreach fname [split $name "/"] {
 		set uri "$uri${fname}/"
                 oacs_dav::conn -set item_name $fname
-		oacs_dav::conn -set url $uri
+		oacs_dav::conn -set uri $uri
 		oacs_dav::conn -set extra_url $fname
 		oacs_dav::conn -set urlv [split $uri "/"]
 		aa_log "name $fname uri $uri"
