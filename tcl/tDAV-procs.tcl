@@ -1104,7 +1104,10 @@ proc tdav::filter_webdav_lock {args} {
     return filter_ok
 }
 
-proc tdav::set_lock {uri depth type scope owner {timeout "180"} {locktime ""} } {
+proc tdav::set_lock {uri depth type scope owner {timeout ""} {locktime ""} } {
+    if {[string equal "" $timeout]} {
+	set timeout [ns_config "ns/server/[ns_info server]/tdav" "defaultlocktimeout" "300"]
+    }
     if {[string equal "" $locktime]} {
 	set locktime [clock format [clock seconds]]
     }
