@@ -8,14 +8,14 @@
 
 create table dav_site_node_folder_map (
         node_id      integer
-		        constraint dav_site_node_folder_map_node_id_un
+		        constraint dav_sn_folder_map_node_id_un
 			unique
-                        constraint dav_side_node_folder_map_node_id_fk
-                        references apm_packages,
+                        constraint dav_sn_folder_map_node_id_fk
+                        references site_nodes,
         folder_id       integer
                         constraint dav_impls_folder_id_fk
                         references cr_folders,
 	enabled_p	char(1)
-			constraint dav_site_node_folder_map_enabled_p_bl
-			check enabled_p in ('t','f')
+			constraint dav_sn_folder_map_enbld_p_bl
+			check (enabled_p in ('t','f'))
 );

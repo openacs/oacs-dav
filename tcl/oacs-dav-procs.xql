@@ -12,9 +12,9 @@
   <fullquery name="oacs_dav::register_folder.add_folder">
     <querytext>
       insert into dav_site_node_folder_map
-      (folder_id, node_id, enabled_p)
+      (node_id, folder_id, enabled_p)
       values
-      (:folder_id, :node_id, :enabled_p)
+      (:node_id, :folder_id, :enabled_p)
     </querytext>
   </fullquery>
 
