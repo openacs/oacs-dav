@@ -390,9 +390,11 @@ ns_log debug "oacs_dav::handle_request method=$method uri=$uri"
     
     # here the sc impl might return us some data,
     # then we would probably have to send that to tDAV for processing
-ns_log debug "DAV: response is $response"
+    ns_log debug "DAV: response is $response"
 
-    tdav::respond $response
+    if {![string equal -nocase "get" $method]} {
+	tdav::respond $response
+    }
 }
 
 ad_proc -public oacs_dav::request_site_node { uri } {
