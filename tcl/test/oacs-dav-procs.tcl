@@ -63,7 +63,7 @@ aa_register_case oacs_dav_put {
 	    aa_log "Item_id=$new_item_id"
 	    aa_true "Content Item Created" [expr ![empty_string_p $new_item_id]]
 	    set revision_id [db_string revision_exists "" -default ""]	    
-	    aa_trute "Content Revision Created"  [expr ![empty_string_p $revision_id]]
+	    aa_true "Content Revision Created"  [expr ![empty_string_p $revision_id]]
 	    set cr_filename "[cr_fs_path]/[db_string get_content_filename ""]"
 	    aa_true "Content Attribute Set" [string equal [file size [oacs_dav::conn tmpfile]] [file size $cr_filename]]
 	    
