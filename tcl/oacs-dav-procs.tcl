@@ -61,50 +61,25 @@ ad_proc oacs_dav::set_user_id {} {
 	set user [lindex [split [ns_uudecode $up] ":"] 0]
 	set password [lindex [split [ns_uudecode $up] ":"] 1]
 	ns_log debug "\nACS VERSION [ad_acs_version]"
-	switch -glob -- [ad_acs_version] {
-	    "5.0*" {
-		ns_log debug "\nTDAV 5.0 authentication"
-		array set auth [auth::authenticate \
-				    -username $user \
-				    -password $password]
-		if {![string equal $auth(auth_status) "ok"]} {
-		    array set auth [auth::authenticate \
-					-email $user \
-					-password $password]
-		    if {![string equal $auth(auth_status) "ok"]} {
-			ns_log debug "\nTDAV 5.0 auth status $auth(auth_status)"
+	
+	
+	ns_log debug "\nTDAV 5.0 authentication"
+	array set auth [auth::authenticate \
+			    -username $user \
+			    -password $password]
+	if {![string equal $auth(auth_status) "ok"]} {
+	    array set auth [auth::authenticate \
+				-email $user \
+				-password $password]
+	    if {![string equal $auth(auth_status) "ok"]} {
+		ns_log debug "\nTDAV 5.0 auth status $auth(auth_status)"
 			ns_returnunauthorized
 			return 0
-		    }
-
-		}
-		ns_log debug "\nTDAV: auth_check openacs 5.0 user_id= $auth(user_id)"
-		ad_conn -set user_id $auth(user_id)
-		return
-	    }
-	    default {
-		# for 4.6:
-		ns_log debug "\nTDAV 4.6 authentication"		    
-		set email [string tolower $user]
-		if {[db_0or1row user_login_user_id_from_email {
-		    select user_id, member_state, email_verified_p
-		    from cc_users
-		    where email = :email}] } {
-		    
-		    if {[ad_check_password $user_id $password]} {
-			ns_log debug "\nTDAV setting user_id $user_id"
-			ad_conn -set user_id $user_id
-			ad_conn -set untrusted_user_id $user_id
-			return
-		    }
-
-		}
-		ns_log debug "\nTDAV: openacs user/password not matched"
-		ns_returnunauthorized
-		return
-
 	    }
 	}
+	ns_log debug "\nTDAV: auth_check openacs 5.0 user_id= $auth(user_id)"
+	ad_conn -set user_id $auth(user_id)
+
     } else {
 	# no authenticate header, anonymous visitor
 	ad_conn -set user_id 0
