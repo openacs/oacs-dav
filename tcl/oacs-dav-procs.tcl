@@ -799,7 +799,7 @@ ad_proc oacs_dav::impl::content_folder::lock {} {
 	set depth [tdav::conn depth]
 	set timeout [tdav::conn lock_timeout]
 	if {[empty_string_p $timeout]} {
-	    set timeout 300
+	    set timeout [parameter::get_from_package_key -parameter "DefaultLockTimeout" -package_key "oacs-dav" -default "300"]
 	}
 	set token [tdav::set_lock $uri $depth $type $scope $owner $timeout]
 	set ret_code 200

@@ -8,19 +8,21 @@
     <singleton-p>t</singleton-p>
     <auto-mount>webdav-support</auto-mount>
 
-    <version name="0.4d" url="http://openacs.org/repository/download/apm/oacs-dav-0.4d.apm">
-        <owner url="mailto:dave@thedesignexperience.org">dave bauer</owner>
+    <version name="0.5d" url="http://openacs.org/repository/download/apm/oacs-dav-0.5d.apm">
+        <owner url="mailto:dave@thedesignexperience.org">Dave Bauer</owner>
         <summary>Provides services to enable webDAV access to content repository items.</summary>
-        <release-date>2004-02-16</release-date>
+        <release-date>2004-04-25</release-date>
+        <vendor>OpenACS</vendor>
         <description format="text/html">An interface to the tDAV webDAV package. oacs-dav provides services to offer webDAV access to content repository data.</description>
 
-        <provides url="oacs-dav" version="0.4d"/>
+        <provides url="oacs-dav" version="0.5d"/>
 
         <callbacks>
-            <callback type="after-install"  proc="oacs_dav::install::package_install"/>
             <callback type="before-uninstall"  proc="oacs_dav::install::package_uninstall"/>
+            <callback type="after-install"  proc="oacs_dav::install::package_install"/>
         </callbacks>
         <parameters>
+            <parameter datatype="number"  min_n_values="1"  max_n_values="1"  name="DefaultLockTimeout"  default="300" description="Length of time in seconds for locks if WebDAV client does not specify a time. Locks will expire after this length of time."/>
             <parameter datatype="string"  min_n_values="1"  max_n_values="1"  name="WebDAVURLPrefix"  default="/dav" description="Prefix to be added to the urls for WebDAV requests."/>
         </parameters>
 
