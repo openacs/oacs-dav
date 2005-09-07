@@ -162,7 +162,7 @@ ad_proc oacs_dav::authorize { args } {
                                       -object_id [oacs_dav::conn dest_parent_id ] \
                                       -party_id $user_id \
                                       -privilege "create"] \
-                                      || [permission::perission_p \
+                                      || [permission::permission_p \
                                               -object_id [oacs_dav::conn dest_parent_id ] \
                                              -party_id $user_id \
                                               -privilege "write"])]
