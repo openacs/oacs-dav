@@ -25,29 +25,59 @@
   <fullquery
     name="oacs_dav::impl::content_folder::propfind.get_properties">
     <querytext>
-      select coalesce (cr.content_length,0) as content_length,
-	coalesce(cr.mime_type,'*/*') as mime_type,
-	to_char(timezone('GMT',o.creation_date) :: timestamptz ,'YYYY-MM-DD"T"HH:MM:SS.MS"Z"') as creation_date,
-	to_char(timezone('GMT',o.last_modified) :: timestamptz ,'Dy, DD Mon YYYY HH:MM:SS TZ') as last_modified,
-	ci1.item_id,
-	case when ci1.item_id=ci2.item_id then '' else ci1.name end as name,
-	content_item__get_path(ci1.item_id,:folder_id) as item_uri,
-	case when o.object_type='content_folder' then 1 else 0 end
-	as collection_p
-      from cr_items ci1 left join cr_revisions cr on ci1.live_revision = cr.revision_id,
-      cr_items ci2,
-      acs_objects o
-      where ci1.tree_sortkey between ci2.tree_sortkey and
-      tree_right(ci2.tree_sortkey)
-      and ci2.item_id=:folder_id
-      and ci1.item_id = o.object_id
-      and (tree_level(ci1.tree_sortkey) - tree_level(ci2.tree_sortkey))
-	<= :depth :: integer
-      and exists (select 1
+      select
+        coalesce (cr.content_length,0) as content_length,
+        coalesce(cr.mime_type,'*/*') as mime_type,
+        to_char(timezone('GMT',o.creation_date) :: timestamptz ,'YYYY-MM-DD"T"HH:MM:SS.MS"Z"') as creation_date,
+        to_char(timezone('GMT',o.last_modified) :: timestamptz ,'Dy, DD Mon YYYY HH:MM:SS TZ') as last_modified,
+        ci1.item_id,
+        case when ci1.item_id=ci2.item_id then '' else ci1.name end as name,
+        content_item__get_path(ci1.item_id,:folder_id) as item_uri,
+        case when o.object_type='content_folder' then 1 else 0 end
+        as collection_p
+      from
+        cr_items ci1,
+        cr_revisions cr,
+        cr_items ci2,
+        acs_objects o
+      where
+        ci1.live_revision = cr.revision_id and
+        ci1.tree_sortkey between ci2.tree_sortkey and tree_right(ci2.tree_sortkey) and
+        ci2.item_id=:folder_id and
+        ci1.item_id = o.object_id and
+        (tree_level(ci1.tree_sortkey) - tree_level(ci2.tree_sortkey)) <= :depth :: integer and
+        exists (select 1
                   from acs_object_party_privilege_map m
                   where m.object_id = ci1.item_id
                   and m.party_id = :user_id
                   and m.privilege = 'read')
+      union
+      select 0 as content_length,
+        '*/*' as mime_type,
+        to_char(timezone('GMT',o.creation_date) :: timestamptz ,'YYYY-MM-DD"T"HH:MM:SS.MS"Z"') as creation_date,
+        to_char(timezone('GMT',o.last_modified) :: timestamptz ,'Dy, DD Mon YYYY HH:MM:SS TZ') as last_modified,
+        ci1.item_id,
+        case when ci1.item_id=ci2.item_id then '' else ci1.name end as name,
+        content_item__get_path(ci1.item_id,:folder_id) as item_uri,
+        case when o.object_type='content_folder' then 1 else 0 end
+        as collection_p
+      from
+        cr_items ci1,
+        cr_items ci2,
+        acs_objects o
+      where
+        ci1.tree_sortkey between ci2.tree_sortkey and tree_right(ci2.tree_sortkey) and
+        ci2.item_id=:folder_id and
+        ci1.item_id = o.object_id and
+        (tree_level(ci1.tree_sortkey) - tree_level(ci2.tree_sortkey)) <= :depth :: integer and
+        exists (select 1
+                  from acs_object_party_privilege_map m
+                  where m.object_id = ci1.item_id
+                  and m.party_id = :user_id
+                  and m.privilege = 'read') and
+        not exists (select 1
+                  from cr_revisions cr
+                  where cr.revision_id = ci1.live_revision)
     </querytext>
   </fullquery>
 
@@ -55,13 +85,13 @@
     name="oacs_dav::impl::content_revision::propfind.get_properties">
     <querytext>
       select
-	ci.item_id,
-	ci.name,
-	content_item__get_path(ci.item_id,:folder_id) as item_uri,
-	coalesce(cr.mime_type,'*/*') as mime_type,
-	coalesce(cr.content_length,0) as content_length,
-	to_char(timezone('GMT',o.creation_date) :: timestamptz ,'YYYY-MM-DD"T"HH:MM:SS.MS"Z"') as creation_date,
-	to_char(timezone('GMT',o.last_modified) :: timestamptz ,'Dy, DD Mon YYYY HH:MM:SS TZ') as last_modified
+        ci.item_id,
+        ci.name,
+        content_item__get_path(ci.item_id,:folder_id) as item_uri,
+        coalesce(cr.mime_type,'*/*') as mime_type,
+        coalesce(cr.content_length,0) as content_length,
+        to_char(timezone('GMT',o.creation_date) :: timestamptz ,'YYYY-MM-DD"T"HH:MM:SS.MS"Z"') as creation_date,
+        to_char(timezone('GMT',o.last_modified) :: timestamptz ,'Dy, DD Mon YYYY HH:MM:SS TZ') as last_modified
       from cr_items ci,
       acs_objects o,
       cr_revisions cr
@@ -108,16 +138,16 @@
 
     <fullquery name="oacs_dav::impl::content_folder::copy.update_child_revisions">
       <querytext>
-	update cr_items 
-	set live_revision = latest_revision
-	where exists (
-		select 1 
-		from
-		(select ci1.item_id as child_item_id 
+        update cr_items 
+        set live_revision = latest_revision
+        where exists (
+                select 1 
+                from
+                (select ci1.item_id as child_item_id 
                 from cr_items ci1, cr_items ci2
-		where ci2.item_id=:new_folder_id
-	        and ci1.tree_sortkey 
-	        between ci2.tree_sortkey and tree_right(ci2.tree_sortkey)
+                where ci2.item_id=:new_folder_id
+                and ci1.tree_sortkey 
+                between ci2.tree_sortkey and tree_right(ci2.tree_sortkey)
                 ) children 
                 where item_id=children.child_item_id 
                       )
@@ -215,13 +245,13 @@
 
   <fullquery name="oacs_dav::impl::content_folder::copy.get_dest_id">
     <querytext>
-	select content_item__get_id(:new_name,:new_parent_folder_id,'f')
+        select content_item__get_id(:new_name,:new_parent_folder_id,'f')
     </querytext>
   </fullquery>
 
   <fullquery name="oacs_dav::impl::content_folder::move.get_dest_id">
     <querytext>
-	select content_item__get_id(:new_name,:new_parent_folder_id,'f')
+        select content_item__get_id(:new_name,:new_parent_folder_id,'f')
     </querytext>
   </fullquery>
 
@@ -241,13 +271,13 @@
   
   <fullquery name="oacs_dav::impl::content_revision::copy.get_dest_id">
     <querytext>
-	select content_item__get_id(:new_name,:new_parent_folder_id,'f')
+        select content_item__get_id(:new_name,:new_parent_folder_id,'f')
     </querytext>
   </fullquery>
 
   <fullquery name="oacs_dav::impl::content_revision::move.get_dest_id">
     <querytext>
-	select content_item__get_id(:new_name,:new_parent_folder_id,'f')
+        select content_item__get_id(:new_name,:new_parent_folder_id,'f')
     </querytext>
   </fullquery>
 
