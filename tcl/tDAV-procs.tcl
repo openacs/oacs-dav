@@ -76,10 +76,10 @@ proc tdav::filter_webdav_options {args} {
     # URL belongs to.
     
     foreach {uri options} [nsv_array get tdav_options] {
-	if {[regexp $uri [ns_conn url]]} {
-	    ns_set put [ns_conn outputheaders] Allow [join $options {, }]
-	    break
-	}
+        if {[regexp $uri [ns_conn url]]} {
+            ns_set put [ns_conn outputheaders] Allow [join $options {, }]
+            break
+        }
     }
 
     # This tells MSFT products to skip looking for FrontPage extensions.
@@ -115,8 +115,8 @@ proc tdav::xml_valid_p {xml_doc} {
 proc tdav::read_xml {} {
     set fp ""
     while {$fp == ""} {
-	set tmpfile [ns_tmpnam]
-	set fp [ns_openexcl $tmpfile]
+        set tmpfile [ns_tmpnam]
+        set fp [ns_openexcl $tmpfile]
     }
     #fconfigure $fp -translation binary -encoding binary
 #    fconfigure $fp -encoding utf-8
@@ -145,10 +145,10 @@ proc tdav::read_xml {} {
 proc tdav::dbm_write_list {uri list} {
     set file [tdav::get_prop_file $uri]
     if {[catch {set f [open $file w]} err]} {
-	# probably no parent dir, create it:
-	file mkdir [file dirname $file]
-	# open again:
-	set f [open $file w] 
+        # probably no parent dir, create it:
+        file mkdir [file dirname $file]
+        # open again:
+        set f [open $file w] 
     }
     fconfigure $f -encoding utf-8
     puts $f $list
@@ -173,16 +173,16 @@ proc tdav::get_prop_file {uri} {
     set name [ns_config "ns/server/[ns_info server]/tdav" propdir]
 
     if {[string equal "" $name]} {
-	set name [file join [ns_info pageroot] "../propdir/${uri}"]
+        set name [file join [ns_info pageroot] "../propdir/${uri}"]
     } else {
-	set name [file join $name $uri]
+        set name [file join $name $uri]
     }
 
     # catch uncreated parent dirs here:
     if {![file exists [file dirname $name]]} {
-	# no parent dir, create it:
-	file mkdir [file dirname $name]
-	# safe for public consumption?
+        # no parent dir, create it:
+        file mkdir [file dirname $name]
+        # safe for public consumption?
     }
     return "${name}.prop"
 }
@@ -205,14 +205,14 @@ proc tdav::get_lock_file {uri} {
     set name [ns_config "ns/server/[ns_info server]/tdav" lockdir]
 
     if {[string equal "" $name]} {
-	set name [file join [ns_info pageroot] "../lockdir/${uri}"]
+        set name [file join [ns_info pageroot] "../lockdir/${uri}"]
     } else {
-	set name [file join $name $uri]
+        set name [file join $name $uri]
     }
     if {![file exists [file dirname $name]]} {
-	# no parent dir, create it:
-	file mkdir [file dirname $name]
-	# safe for public consumption?
+        # no parent dir, create it:
+        file mkdir [file dirname $name]
+        # safe for public consumption?
     }
 
     return "${name}.lock"
@@ -342,11 +342,12 @@ proc tdav::dbm_write_array {uri arr} {
 #
 
 proc tdav::lock_timeout_left { timeout locktime } {
+
     set locktime [clock scan $locktime]
     set lockexpiretime [clock scan "$timeout seconds" -base $locktime]
     set timeout_left [expr $lockexpiretime - [clock seconds]]
     if {$timeout_left < 0} {
-	set timeout_left 0
+        set timeout_left 0
     }
     return $timeout_left
 }
@@ -370,38 +371,40 @@ proc tdav::lock_timeout_left { timeout locktime } {
 #     status of 423 or otherwise treat the file as locked.
 
 proc tdav::check_lock {uri} {
+    
     regsub {^/} $uri {} uri
+    
     # if lock exists, work.  if not, just return.
     if {[file exists [tdav::get_lock_file $uri]]} {
        set lockinfo [tdav::read_lock $uri]
 
-	# check if lock is expired
-	if {[tdav::lock_timeout_left [lindex $lockinfo 4] [lindex $lockinfo 6]] == 0 } {
-	    tdav::remove_lock $uri
-	    return "unlocked"
-	}
-	set hdr [ns_set iget [ns_conn headers] If]
-	
-	# the If header exists, work, otherwise 423
-	
-	if {[info exists hdr] && [string length $hdr]} {
-	    set token ""
-	    # add ? in the token re in case there is a conditional () 
-	    # in the header
-	    regexp {(<https?://[^/]+([^>]+)>\s+)?\(<([^>]+)>\)} $hdr nil maybe hdr_uri token
-	    
-	    set ftk [lindex $lockinfo 3]
-	    if {![info exists token] || ![string equal $token $ftk]} {
+        # check if lock is expired
+        if {[tdav::lock_timeout_left [lindex $lockinfo 4] [lindex $lockinfo 6]] == 0 } {
+            tdav::remove_lock $uri
+            return "unlocked"
+        }
+        set hdr [ns_set iget [ns_conn headers] If]
+        
+        # the If header exists, work, otherwise 423
+        
+        if {[info exists hdr] && [string length $hdr]} {
+            set token ""
+            # add ? in the token re in case there is a conditional () 
+            # in the header
+            regexp {(<https?://[^/]+([^>]+)>\s+)?\(<([^>]+)>\)} $hdr nil maybe hdr_uri token
+            
+            set ftk [lindex $lockinfo 3]
+            if {![info exists token] || ![string equal $token $ftk]} {
                 ns_log Debug "tdav::check_lock: token mismatch $ftk expected hdr: $hdr token: $token"
-		ns_return 423 {text/plain} {}
-		return filter_return
-	    }
-	} else {
+                ns_return 423 {text/plain} {}
+                return filter_return
+            }
+        } else {
             ns_log Debug "tdav::check_lock: no \"If\" header found for request of $uri"
-	    ns_return 423 {text/plain} {}
-	    return filter_return
-	}
-	# also check for uri == hdr_uri
+            ns_return 423 {text/plain} {}
+            return filter_return
+        }
+        # also check for uri == hdr_uri
     }
     return unlocked
 }
@@ -422,20 +425,20 @@ proc tdav::check_lock_for_unlock {uri} {
     regsub {^/} $uri {} uri
     # if lock exists, work.  if not, just return.
     if {[file exists [tdav::get_lock_file $uri]]} {
-	set hdr [ns_set iget [ns_conn headers] {Lock-Token}]
-	# the If header exists, work, otherwise 423
-	if {[info exists hdr] && [string length $hdr]} {
-	    regexp {<([^>]+)>} $hdr nil token
-	    set ftk [lindex [tdav::read_lock $uri] 3]
-	    if {[info exists token] && [string equal $token $ftk]} {
-		# it's good, the tokens match.  carry on.
-	    } else {
-		return filter_return
-	    }
-	} else {
-	    return filter_return
-	}
-	# also check for uri == hdr_uri
+        set hdr [ns_set iget [ns_conn headers] {Lock-Token}]
+        # the If header exists, work, otherwise 423
+        if {[info exists hdr] && [string length $hdr]} {
+            regexp {<([^>]+)>} $hdr nil token
+            set ftk [lindex [tdav::read_lock $uri] 3]
+            if {[info exists token] && [string equal $token $ftk]} {
+                # it's good, the tokens match.  carry on.
+            } else {
+                return filter_return
+            }
+        } else {
+            return filter_return
+        }
+        # also check for uri == hdr_uri
     }
     return unlocked
 }
@@ -466,9 +469,9 @@ proc tdav::get_fs_props {} {
     lappend fs_props [list D getlastmodified]  {subst {[clock format $file_stat(mtime) -format "%a, %d %b %Y %H:%M:%S %Z" -gmt 1]}}
     lappend fs_props [list D getetag]          {subst {"1f9a-400-3948d0f5"}}
     lappend fs_props [list D resourcetype] {if {[file isdirectory $entry]} {
-	subst {D:collection}
+        subst {D:collection}
     } else {
-	subst {[ns_guesstype $filename]}
+        subst {[ns_guesstype $filename]}
     }}
 
     return $fs_props
@@ -482,11 +485,11 @@ proc tdav::extract_propertyupdate_remove {proplist} {
     # ht
     # ACTION
     foreach c $proplist {
-	# extraneous, then name
-	set p [[$c childNodes] childNodes]
-	set name [$p nodeName]
-	# DATA:
-	set ht($name) [[$p childNodes] nodeValue]
+        # extraneous, then name
+        set p [[$c childNodes] childNodes]
+        set name [$p nodeName]
+        # DATA:
+        set ht($name) [[$p childNodes] nodeValue]
     }
     return $ht
 }
@@ -499,11 +502,11 @@ proc tdav::extract_propertyupdate_set {proplist} {
     # ht
     # ACTION
     foreach c $proplist {
-	# extraneous, then name
-	set p [[$c childNodes] childNodes]
-	set name [$p nodeName]
-	# DATA:
-	set ht($name) [[$p childNodes] nodeValue]
+        # extraneous, then name
+        set p [[$c childNodes] childNodes]
+        set name [$p nodeName]
+        # DATA:
+        set ht($name) [[$p childNodes] nodeValue]
     }
     return $ht
 }
@@ -527,44 +530,44 @@ proc tdav::filter_webdav_proppatch {args} {
     set xml [tdav::read_xml]
     
     if {[catch {dom parse $xml} xd]} {
-	# xml body is not well formed
-	ns_returnbadrequest
-	return filter_return
+        # xml body is not well formed
+        ns_returnbadrequest
+        return filter_return
     }
     
     set setl [$xd getElementsByTagName "*set"]
     set rml [$xd getElementsByTagName "*remove"]
     set prop_req [list]
     foreach node $rml {
-	set p [[$node childNodes] childNodes]
-	# we use localname because we always resolve the URI namespace
-	# for the tag name
-	set ns [$p namespaceURI]
-	if {[string equal "" $ns]} {
-	    set name [$p nodeName]
-	} else {
-	    set name [$p localName]
-	}
+        set p [[$node childNodes] childNodes]
+        # we use localname because we always resolve the URI namespace
+        # for the tag name
+        set ns [$p namespaceURI]
+        if {[string equal "" $ns]} {
+            set name [$p nodeName]
+        } else {
+            set name [$p localName]
+        }
        if {[catch {set value [[$p childNodes] nodeValue]}]} {
-	    set value ""
-	}
-	lappend prop_req remove [list [list $ns $name] $value]
+            set value ""
+        }
+        lappend prop_req remove [list [list $ns $name] $value]
     }
 
     foreach node $setl {
-	set p [[$node childNodes] childNodes]
-	# we use localname because we always resolve the URI namespace
-	# for the tag name
-	set ns [$p namespaceURI]
-	if {[string equal "" $ns]} {
-	    set name [$p nodeName]
-	} else {
-	    set name [$p localName]
-	}
-	if {[catch {set value [[$p childNodes] nodeValue]}]} {
-	    set value ""
-	}
-	lappend prop_req set [list [list $ns $name] $value]
+        set p [[$node childNodes] childNodes]
+        # we use localname because we always resolve the URI namespace
+        # for the tag name
+        set ns [$p namespaceURI]
+        if {[string equal "" $ns]} {
+            set name [$p nodeName]
+        } else {
+            set name [$p localName]
+        }
+        if {[catch {set value [[$p childNodes] nodeValue]}]} {
+            set value ""
+        }
+        lappend prop_req set [list [list $ns $name] $value]
     }
 
     tdav::conn -set prop_req $prop_req
@@ -595,16 +598,16 @@ proc tdav::webdav_proppatch {} {
     set body ""
     set ret_code 200
     if {![file exists $filename]} {
-	set ret_code 404
+        set ret_code 404
     } else {
-	if {![string equal unlocked [tdav::check_lock $uri]]} {
-	    set ret_code 423
-	    set response "The resource is locked"
-	} else {
-	    set prop_req [tdav::conn prop_req]
-	    set response [tdav::update_user_props $uri $prop_req]
-	}
-	set ret_code 207
+        if {![string equal unlocked [tdav::check_lock $uri]]} {
+            set ret_code 423
+            set response "The resource is locked"
+        } else {
+            set prop_req [tdav::conn prop_req]
+            set response [tdav::update_user_props $uri $prop_req]
+        }
+        set ret_code 207
     }
 
     tdav::respond [list $ret_code $response]
@@ -640,27 +643,27 @@ proc tdav::webdav_propfind {} {
     # wait, no, this is right as long as the DAV request is correct
     # so fuck it
     if {$depth > 0} {
-	set entries [glob -nocomplain [file join [ns_info pageroot] $uri *]]
+        set entries [glob -nocomplain [file join [ns_info pageroot] $uri *]]
     } else {
-	set entries [glob -nocomplain [file join [ns_info pageroot] $uri]]
+        set entries [glob -nocomplain [file join [ns_info pageroot] $uri]]
     }
     
     foreach entry $entries {
-	set entry_props [list]
-	set filename [lindex [file split $entry] end]
-	# Tcl befuddles me:
-	set href [string replace $entry 1 [string length [ns_info pageroot]] ""]
-	file stat $entry file_stat
-	set collection_p [string equal "directory" $file_stat(type)]
+        set entry_props [list]
+        set filename [lindex [file split $entry] end]
+        # Tcl befuddles me:
+        set href [string replace $entry 1 [string length [ns_info pageroot]] ""]
+        file stat $entry file_stat
+        set collection_p [string equal "directory" $file_stat(type)]
 
-	foreach {i j} [tdav::get_fs_props] {
-	    lappend entry_props [list [lindex $i 0] [lindex $i 1]] [eval $j]
-	}
-	foreach {i j} [tdav::get_user_props $uri $depth $prop_req] {
-	    lappend entry_props [list [lindex $i 0] [lindex $i 1]] $j
-	}
-	
-	lappend props [list $href $collection_p $entry_props]
+        foreach {i j} [tdav::get_fs_props] {
+            lappend entry_props [list [lindex $i 0] [lindex $i 1]] [eval $j]
+        }
+        foreach {i j} [tdav::get_user_props $uri $depth $prop_req] {
+            lappend entry_props [list [lindex $i 0] [lindex $i 1]] $j
+        }
+        
+        lappend props [list $href $collection_p $entry_props]
     }
     
     tdav::respond [list 207 $props]
@@ -693,27 +696,27 @@ proc tdav::update_user_props {uri prop_req} {
     array set props [tdav::dbm_read_list $uri]
     set status [list]
     foreach {action i} $prop_req {
-	set k [lindex $i 0]
-	set value [lindex $i 1]
-	switch -- $action {
-	    set {
-		if {[catch {set props($k) $value} err]} {
-		    lappend status [list "HTTP/1.1 409 Conflict" $k]
-		} else {
-		    lappend status [list "HTTP/1.1 200 OK" $k]
-		}
-		
-	    }
-	    remove {
-		#according to WebDAV spec removing a nonexistent
-		# property is not an error, if it's there
-		# remove it, otherwise, continue.
-		if {[info exists props($k)]} {
-		    unset props($k)
-		}
-		lappend status [list "HTTP/1.1 200 OK" $k]
-	    }
-	}
+        set k [lindex $i 0]
+        set value [lindex $i 1]
+        switch -- $action {
+            set {
+                if {[catch {set props($k) $value} err]} {
+                    lappend status [list "HTTP/1.1 409 Conflict" $k]
+                } else {
+                    lappend status [list "HTTP/1.1 200 OK" $k]
+                }
+                
+            }
+            remove {
+                #according to WebDAV spec removing a nonexistent
+                # property is not an error, if it's there
+                # remove it, otherwise, continue.
+                if {[info exists props($k)]} {
+                    unset props($k)
+                }
+                lappend status [list "HTTP/1.1 200 OK" $k]
+            }
+        }
 
     #filter out filesystem sets
     # DAVEB where is this filtering occuring?
@@ -752,27 +755,27 @@ proc tdav::filter_webdav_propfind {args} {
     set entry [file join [ns_info pageroot] $uri]
     # parse the xml body to check if its valid
     if {![string equal "" $xml] && [catch {dom parse $xml} xd]} {
-	ns_return 400 text/plain "XML request not well-formed."
-	return filter_return
+        ns_return 400 text/plain "XML request not well-formed."
+        return filter_return
     }
     
     set xml_prop_list [list]
 
     if {[info exists xd] && ![string equal "" $xd]} {
-	set prop [$xd getElementsByTagNameNS "DAV:" "prop"]
-	# if <prop> element doesn't exist we return all properties
-	if {![string equal "" $prop]} {
-	    set xml_prop_list [$prop childNodes]
-	}
-	foreach node $xml_prop_list {
-	    set ns [$node namespaceURI]
-	    if {[string equal $ns ""]} {
-		set name [$node nodeName]
-	    } else {
-		set name [$node localName]
-	    }
-	    lappend prop_req [list $ns $name]
-	}
+        set prop [$xd getElementsByTagNameNS "DAV:" "prop"]
+        # if <prop> element doesn't exist we return all properties
+        if {![string equal "" $prop]} {
+            set xml_prop_list [$prop childNodes]
+        }
+        foreach node $xml_prop_list {
+            set ns [$node namespaceURI]
+            if {[string equal $ns ""]} {
+                set name [$node nodeName]
+            } else {
+                set name [$node localName]
+            }
+            lappend prop_req [list $ns $name]
+        }
     }
     tdav::conn -set prop_req $prop_req
     # this should be the end of the filter.
@@ -823,16 +826,16 @@ proc tdav::webdav_put {} {
     set ret_code 500
     set body ""
     if {[file exists $entry]} {
-	if {![string equal "unlocked" [tdav::check_lock $uri]]} {
-	    set ret_code 423
-	    set body "Resource is locked."
-	} else {
-	    file rename -force -- $tmpfile $entry
-	    set ret_code 204
-	}
+        if {![string equal "unlocked" [tdav::check_lock $uri]]} {
+            set ret_code 423
+            set body "Resource is locked."
+        } else {
+            file rename -force -- $tmpfile $entry
+            set ret_code 204
+        }
     } else {
         file rename -- $tmpfile $entry
-	set ret_code 201
+        set ret_code 201
     }
 
     tdav::respond [list $ret_code ""]
@@ -878,22 +881,22 @@ proc tdav::webdav_delete {} {
     set body ""
     
     if {[file exists $entry]} {
-	# 423's and returns:
-	if {[string equal unlocked [tdav::check_lock $uri]]} {
-	    file delete -force -- $entry
-	    ns_unlink -nocomplain $entry
-	    tdav::delete_props $uri
-	    tdav::remove_lock $uri
-	    set ret_code 204
-	} else {
-	    set ret_code 423
-	    set body "Resource is locked."
-	}
+        # 423's and returns:
+        if {[string equal unlocked [tdav::check_lock $uri]]} {
+            file delete -force -- $entry
+            ns_unlink -nocomplain $entry
+            tdav::delete_props $uri
+            tdav::remove_lock $uri
+            set ret_code 204
+        } else {
+            set ret_code 423
+            set body "Resource is locked."
+        }
     } else {
-	# file exists will fail on urls created by urlencode.  do a decode here & test
-	# ?
+        # file exists will fail on urls created by urlencode.  do a decode here & test
+        # ?
 
-	set ret_code 404
+        set ret_code 404
     }
     
     tdav::respond [list $ret_code $body]
@@ -914,10 +917,10 @@ proc tdav::webdav_delete {} {
 
 proc tdav::filter_webdav_mkcol {args} {
     if [ns_conn contentlength] {
-	set ret_code 415
-	set html_response ""
-	tdav::respond [list 415]
-	return filter_return
+        set ret_code 415
+        set html_response ""
+        tdav::respond [list 415]
+        return filter_return
     }
     return filter_ok
 }
@@ -943,13 +946,13 @@ proc tdav::webdav_mkcol {} {
     regsub {/[^/]*/*$} $entry {} parent_dir
 
     if ![file exists $parent_dir] {
-	set ret_code 409
+        set ret_code 409
     } elseif ![file exists $entry] {
-	file mkdir $entry
-	file mkdir [file join [ns_info pageroot] "../props/" $uri]
-	set ret_code 201
+        file mkdir $entry
+        file mkdir [file join [ns_info pageroot] "../props/" $uri]
+        set ret_code 201
     } else {
-	set ret_code 405
+        set ret_code 405
 
     }
 
@@ -987,27 +990,27 @@ proc tdav::webdav_copy {} {
     set entry [file join [ns_info pageroot] $uri]
     
     if {![file exists $entry]} {
-	set ret_code 404
+        set ret_code 404
     } else {
-	if {[file exists $local_dest]} {
-	    if {![string equal "unlocked" [tdav::check_lock $dest]]} {
-		#	    ns_return 423 {text/plain} {Resource is locked.}
-		set ret_code 423
-		set body "Resource is locked."
-	    } else {
-		if [string equal -nocase $overwrite "F"] {
-		    set ret_code 412
-		} else {
-		    set ret_code 204
-		    file copy -force $entry $local_dest
-		    tdav::copy_props $uri $newuri
-		}
-	    }
-	} else {
-	    set ret_code 201
-	    file copy $entry $local_dest
-	    tdav::copy_props $uri $newuri
-	}
+        if {[file exists $local_dest]} {
+            if {![string equal "unlocked" [tdav::check_lock $dest]]} {
+                #           ns_return 423 {text/plain} {Resource is locked.}
+                set ret_code 423
+                set body "Resource is locked."
+            } else {
+                if [string equal -nocase $overwrite "F"] {
+                    set ret_code 412
+                } else {
+                    set ret_code 204
+                    file copy -force $entry $local_dest
+                    tdav::copy_props $uri $newuri
+                }
+            }
+        } else {
+            set ret_code 201
+            file copy $entry $local_dest
+            tdav::copy_props $uri $newuri
+        }
     }
     ns_return $ret_code {text/html} {}
     tdav::respond [list $ret_code]
@@ -1045,30 +1048,30 @@ proc tdav::webdav_move { args } {
     set body {}
 
     if {![file exists $entry]} {
-	set ret_code 404
+        set ret_code 404
     } else {
-	if {![string equal "unlocked" [tdav::check_lock $uri]]} {
-#	    ns_return 423 {text/plain} {Resource is locked.}
-	    set ret_code 423
-	    set body "Resource is locked."
-	} elseif [file exists $local_dest] {
-	    if [string equal -nocase $overwrite "F"] {
-		set ret_code 412
-	    } else {
-		set ret_code 204
-		file delete -force $local_dest
-		file copy -force $entry $local_dest
-		file delete -force $entry
-		tdav::copy_props $uri $newuri
-		tdav::delete_props $uri
-	    }
-	} else {
-	    set ret_code 201
-	    file copy $entry $local_dest
-	    tdav::copy_props $uri $newuri
-	    file delete -force $entry
-	    tdav::delete_props $uri
-	}
+        if {![string equal "unlocked" [tdav::check_lock $uri]]} {
+#           ns_return 423 {text/plain} {Resource is locked.}
+            set ret_code 423
+            set body "Resource is locked."
+        } elseif [file exists $local_dest] {
+            if [string equal -nocase $overwrite "F"] {
+                set ret_code 412
+            } else {
+                set ret_code 204
+                file delete -force $local_dest
+                file copy -force $entry $local_dest
+                file delete -force $entry
+                tdav::copy_props $uri $newuri
+                tdav::delete_props $uri
+            }
+        } else {
+            set ret_code 201
+            file copy $entry $local_dest
+            tdav::copy_props $uri $newuri
+            file delete -force $entry
+            tdav::delete_props $uri
+        }
     }
 
     ns_return $ret_code {text/html} $body
@@ -1085,14 +1088,14 @@ proc tdav::filter_webdav_lock {args} {
     set scope [[[lindex $l 0] childNodes] nodeName]
     set type [[[lindex $l 1] childNodes] nodeName]
     if {[catch {set owner [[[lindex $l 2] childNodes] nodeValue]} err]} {
-	set owner ""
+        set owner ""
     }
     set depth [ns_set iget [ns_conn headers] Depth]
     set timeout [ns_set iget [ns_conn headers] Timeout]
     regsub {^Second-} $timeout {} timeout
     tdav::conn -set lock_timeout $timeout
      if {![string length $depth]} {
-	set depth 0
+        set depth 0
     }
     tdav::conn -set depth $depth
 
@@ -1106,10 +1109,10 @@ proc tdav::filter_webdav_lock {args} {
 
 proc tdav::set_lock {uri depth type scope owner {timeout ""} {locktime ""} } {
     if {[string equal "" $timeout]} {
-	set timeout [ns_config "ns/server/[ns_info server]/tdav" "defaultlocktimeout" "300"]
+        set timeout [ns_config "ns/server/[ns_info server]/tdav" "defaultlocktimeout" "300"]
     }
     if {[string equal "" $locktime]} {
-	set locktime [clock format [clock seconds]]
+        set locktime [clock format [clock seconds] -format "%T %D"]
     }
     set token "opaquelocktoken:[ns_rand 2147483647]"
     set lock [list $type $scope $owner $token $timeout $depth $locktime]
@@ -1128,29 +1131,29 @@ proc tdav::webdav_lock {} {
     set filename [lindex [file split $entry] end]
     set existing_lock_token [tdav::conn lock_token]
 #    if {![file exists $entry]} {
-#	set ret_code 404
+#       set ret_code 404
 #    } else
     if {![string equal "unlocked" [tdav::check_lock $uri]]} {
-	set ret_code 423
-	tdav::respond [list $ret_code]
+        set ret_code 423
+        tdav::respond [list $ret_code]
     } else {
-	set depth [tdav::conn depth]
-	set timeout [tdav::conn lock_timeout]
-	if {[string equal "" $timeout]} {
-	    #probably make this a paramter?
-	    set timeout 180
-	}
-	if {![string equal "" $existing_lock_token] && [file exists [tdav::get_lock_file $uri]} {
-	    
-	    set old_lock [tdav::read_lock $uri]
-	    set new_lock [list [lindex $old_lock 0] [lindex $old_lock 1] [lindex $old_lock 2] [lindex $old_lock 3] $timeout [clock format [clock seconds]]]
-	    tdav::write_lock $uri $new_lock
-	} else {
-	    set token [tdav::set_lock $uri $depth $type $scope $owner $timeout [clock format [clock seconds]]]
-	}
-	set ret_code 200
+        set depth [tdav::conn depth]
+        set timeout [tdav::conn lock_timeout]
+        if {[string equal "" $timeout]} {
+            #probably make this a paramter?
+            set timeout 180
+        }
+        if {![string equal "" $existing_lock_token] && [file exists [tdav::get_lock_file $uri]} {
+            
+            set old_lock [tdav::read_lock $uri]
+            set new_lock [list [lindex $old_lock 0] [lindex $old_lock 1] [lindex $old_lock 2] [lindex $old_lock 3] $timeout [clock format [clock seconds]]]
+            tdav::write_lock $uri $new_lock
+        } else {
+            set token [tdav::set_lock $uri $depth $type $scope $owner $timeout [clock format [clock seconds]]]
+        }
+        set ret_code 200
 
-	tdav::respond [list $ret_code [list depth $depth token $token timeout $timeout owner $owner scope $scope type $type]]
+        tdav::respond [list $ret_code [list depth $depth token $token timeout $timeout owner $owner scope $scope type $type]]
     }
 }
 
@@ -1170,15 +1173,15 @@ proc tdav::webdav_unlock {} {
     set filename [lindex [file split $entry] end]
 
     if {![file exists $entry]} {
-	set ret_code 404
-	set body {}
+        set ret_code 404
+        set body {}
     } elseif {![string equal unlocked [tdav::check_lock_for_unlock $uri]]} {
-	set ret_code 423
-	set body "Resource is locked."
+        set ret_code 423
+        set body "Resource is locked."
     } else {
-	tdav::remove_lock $uri
-	set ret_code 204
-	set body ""
+        tdav::remove_lock $uri
+        set ret_code 204
+        set body ""
     }
     tdav::respond [list $ret_code $body]
 }
@@ -1206,18 +1209,18 @@ proc tdav::return_unauthorized { {realm ""} } {
 proc tdav::respond { response } {
     set response_code [lindex $response 0]
     if {[string equal "423" $response_code]} {
-	set response_body "The resource is locked"
-	set mime_type "text/plain"
+        set response_body "The resource is locked"
+        set mime_type "text/plain"
     } else {
-	set response_list [tdav::respond::[string tolower [ns_conn method]] $response]
-	set response_body [lindex $response_list 0]
-	set mime_type [lindex $response_list 1]
-	if {[string equal "" $mime_type]} {
-	    set mime_type "text/plain"
-	}
-	if {[string match "text/xml*" $mime_type]} {
-	    set response_body [encoding convertto utf-8 $response_body]
-	}
+        set response_list [tdav::respond::[string tolower [ns_conn method]] $response]
+        set response_body [lindex $response_list 0]
+        set mime_type [lindex $response_list 1]
+        if {[string equal "" $mime_type]} {
+            set mime_type "text/plain"
+        }
+        if {[string match "text/xml*" $mime_type]} {
+            set response_body [encoding convertto utf-8 $response_body]
+        }
     }
     ns_log debug "\n ----- tdav litmus headers ----- \n [ns_set iget [ns_conn headers] X-Litmus] \n -----\n"
     ns_log debug "\n  ----- tdav::response response_body ----- \n $response_body \n ----- end ----- \n"
@@ -1237,19 +1240,19 @@ proc tdav::respond::lock { response } {
     array set lock [lindex $response 1]
 
     set body [subst {<?xml version="1.0" encoding="utf-8"?>
-	<prop xmlns="DAV:">
-	<lockdiscovery>
-	<activelock>
-	<locktype><${lock(type)}/></locktype>
-	<lockscope><${lock(scope)}/></lockscope>
-	<depth>${lock(depth)}</depth>
-	<owner>${lock(owner)}</owner><timeout>Second-${lock(timeout)}</timeout>
-	<locktoken>
-	<href>${lock(token)}</href>
-	</locktoken>
-	</activelock>
-	</lockdiscovery>
-	</prop>}]
+        <prop xmlns="DAV:">
+        <lockdiscovery>
+        <activelock>
+        <locktype><${lock(type)}/></locktype>
+        <lockscope><${lock(scope)}/></lockscope>
+        <depth>${lock(depth)}</depth>
+        <owner>${lock(owner)}</owner><timeout>Second-${lock(timeout)}</timeout>
+        <locktoken>
+        <href>${lock(token)}</href>
+        </locktoken>
+        </activelock>
+        </lockdiscovery>
+        </prop>}]
     
     ns_set put [ns_conn outputheaders] "Lock-Token" "<${lock(token)}>"
 
@@ -1275,23 +1278,23 @@ proc tdav::respond::proppatch { response } {
     set resp_code [lindex $response 0]
     set href ""
     set body [subst {<?xml version="1.0" encoding="utf-8" ?>
-	<D:multistatus xmlns:D="DAV:">
-	    <D:response xmlns:ns0="DAV:">
-	    <D:href>[ns_conn location]${href}</D:href>
+        <D:multistatus xmlns:D="DAV:">
+            <D:response xmlns:ns0="DAV:">
+            <D:href>[ns_conn location]${href}</D:href>
     }]
 
     foreach res [lindex $response 1] {
-	set status [lindex $res 0]
-	set ns [lindex [lindex $res 1] 0]
-	set name [lindex [lindex $res 1] 1]
-	append body [subst {<D:propstat>
-	    <D:prop><$name xmlns='$ns'/></D:prop>
-	    <D:status>$status</D:status>
-	    </D:propstat>
-	}]
+        set status [lindex $res 0]
+        set ns [lindex [lindex $res 1] 0]
+        set name [lindex [lindex $res 1] 1]
+        append body [subst {<D:propstat>
+            <D:prop><$name xmlns='$ns'/></D:prop>
+            <D:status>$status</D:status>
+            </D:propstat>
+        }]
     }
     append body {</D:response>
-	</D:multistatus>}
+        </D:multistatus>}
     return [list $body {text/xml charset="utf-8"}]
 }
 
@@ -1306,14 +1309,14 @@ proc tdav::respond::move { response } {
 proc tdav::respond::mkcol { response } {
     set body ""
     switch -- [lindex $response 0] {
-	415 {
-#	    set body "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">"
-	}
-	490 {
-#	    set body "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">"
-	}
-	201 {
-# 	    set body "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">
+        415 {
+#           set body "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">"
+        }
+        490 {
+#           set body "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">"
+        }
+        201 {
+#           set body "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">
 # <html><head>
 # <title>201 Created</title>
 # </head><body>
@@ -1321,17 +1324,17 @@ proc tdav::respond::mkcol { response } {
 # <p>Collection [ns_conn url] has been created.</p>
 # <hr />
 # <address></address>
-# 	</body></html>"
+#       </body></html>"
 
-	}
-	405 {
-	    	set body "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">
+        }
+        405 {
+                set body "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">
 <html><head>
 <title>405 Method Not Allowed</title>
 </head><body>
 <h1>Method not allowed</h1>
 </body></html>"
-	}
+        }
     }
     return [list $body text/html]
 }
@@ -1347,125 +1350,125 @@ proc tdav::respond::propfind { response } {
     $n setAttribute "xmlns:b" "urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/"
     set mst_body ""
     foreach res [lindex $response 1] {
-	set href [lindex $res 0]
-	set props [lindex $res 2]
-	set r [$d createElementNS DAV: ns0:response]
-	$n appendChild $r
-	set h [$d createElement D:href]
+        set href [lindex $res 0]
+        set props [lindex $res 2]
+        set r [$d createElementNS DAV: ns0:response]
+        $n appendChild $r
+        set h [$d createElement D:href]
         $h appendChild [$d createTextNode ${href}]
-	set propstat [$d createElement D:propstat]
-	set prop [$d createElement D:prop]
-	$r appendChild $h
-	$r appendChild $propstat
+        set propstat [$d createElement D:propstat]
+        set prop [$d createElement D:prop]
+        $r appendChild $h
+        $r appendChild $propstat
 
-	foreach {i j} $props {
-	    # interestingly enough, adding the namespace here to the prop is fine
-	    set name [lindex $i 1]
-	    set ns [lindex $i 0]
-	    if {![string equal "D" $ns] && ![string equal "ns0" $ns]} {
-		# for user properties set the namespace explicitly in
-		# the tag
-		if {![string equal "" $ns]} {
-		    set pnode [$d createElementNS $ns $name]
-		} else {
-		    set pnode [$d createElement $name]
-		}
-	    } else {
-		set pnode [$d createElement ${ns}:${name}]
-	    }
+        foreach {i j} $props {
+            # interestingly enough, adding the namespace here to the prop is fine
+            set name [lindex $i 1]
+            set ns [lindex $i 0]
+            if {![string equal "D" $ns] && ![string equal "ns0" $ns]} {
+                # for user properties set the namespace explicitly in
+                # the tag
+                if {![string equal "" $ns]} {
+                    set pnode [$d createElementNS $ns $name]
+                } else {
+                    set pnode [$d createElement $name]
+                }
+            } else {
+                set pnode [$d createElement ${ns}:${name}]
+            }
 
-	    if {[string equal "creationdate" $name]} {
+            if {[string equal "creationdate" $name]} {
 
-		$pnode setAttribute "b:dt" "dateTime.tz"
+                $pnode setAttribute "b:dt" "dateTime.tz"
 
-	    }
+            }
 
-	    if {[string equal "getlastmodified" $name]} {
+            if {[string equal "getlastmodified" $name]} {
 
-		$pnode setAttribute "b:dt" "dateTime.rfc1123"
+                $pnode setAttribute "b:dt" "dateTime.rfc1123"
 
-	    }
+            }
 
             if {[string equal "D:collection" $j]} {
 
-	        $pnode appendChild [$d createElement $j]
+                $pnode appendChild [$d createElement $j]
 
-	    } else {
+            } else {
 
-	        $pnode appendChild [$d createTextNode $j]
+                $pnode appendChild [$d createTextNode $j]
 
-	    }
+            }
 
-	    $prop appendChild $pnode
+            $prop appendChild $pnode
 
-	}
+        }
 
-	set supportedlock [$d createElement D:supportedlock]	
-	
-	set lockentry [$d createElement D:lockentry]
-	set lockscope [$d createElement D:lockscope]
-	set exclusive [$d createElement D:exclusive]
-	set locktype [$d createElement D:locktype]
-	set write_type [$d createElement D:write]
-	
-	$supportedlock appendChild $lockentry
-	
+        set supportedlock [$d createElement D:supportedlock]    
+        
+        set lockentry [$d createElement D:lockentry]
+        set lockscope [$d createElement D:lockscope]
+        set exclusive [$d createElement D:exclusive]
+        set locktype [$d createElement D:locktype]
+        set write_type [$d createElement D:write]
+        
+        $supportedlock appendChild $lockentry
+        
         $locktype appendChild $write_type
-	$lockscope appendChild $exclusive
+        $lockscope appendChild $exclusive
 
-	$lockentry appendChild $lockscope
-	$lockentry appendChild $locktype
+        $lockentry appendChild $lockscope
+        $lockentry appendChild $locktype
 
-	$prop appendChild $supportedlock
+        $prop appendChild $supportedlock
 
-	set lockdiscovery [$d createElement D:lockdiscovery]
-	regsub {https?://[^/]+/} $href {/} local_uri
-	if {[file exists [tdav::get_lock_file $local_uri]]} {
-	    # check for timeout
-	    set lockinfo [tdav::read_lock $local_uri]
-	    set lock_timeout_left [tdav::lock_timeout_left [lindex $lockinfo 4] [lindex $lockinfo 6]]
-	    if {$lock_timeout_left > 0} {
+        set lockdiscovery [$d createElement D:lockdiscovery]
+        regsub {https?://[^/]+/} $href {/} local_uri
+        if {[file exists [tdav::get_lock_file $local_uri]]} {
+            # check for timeout
+            set lockinfo [tdav::read_lock $local_uri]
+            set lock_timeout_left [tdav::lock_timeout_left [lindex $lockinfo 4] [lindex $lockinfo 6]]
+            if {$lock_timeout_left > 0} {
 
-		set activelock [$d createElement D:activelock]
-		set locktype [$d createElement D:locktype]
-		set lockscope [$d createElement D:lockscope]
-		set depth [$d createElement D:depth]
-		set owner [$d createElement D:owner]
-		set timeout [$d createElement D:timeout]
-		set locktoken [$d createElement D:locktoken]
-		set locktokenhref [$d createElement D:href]
-		
-		$locktype appendChild [$d createElement D:[lindex $lockinfo 0]]
-		$lockscope appendChild [$d createElement D:[lindex $lockinfo 1]]
-		$depth appendChild [$d createTextNode [lindex $lockinfo 5]]
+                set activelock [$d createElement D:activelock]
+                set locktype [$d createElement D:locktype]
+                set lockscope [$d createElement D:lockscope]
+                set depth [$d createElement D:depth]
+                set owner [$d createElement D:owner]
+                set timeout [$d createElement D:timeout]
+                set locktoken [$d createElement D:locktoken]
+                set locktokenhref [$d createElement D:href]
+                
+                $locktype appendChild [$d createElement D:[lindex $lockinfo 0]]
+                $lockscope appendChild [$d createElement D:[lindex $lockinfo 1]]
+                $depth appendChild [$d createTextNode [lindex $lockinfo 5]]
 
-		$timeout appendChild [$d createTextNode Second-$lock_timeout_left]
-		$owner appendChild [$d createTextNode [lindex $lockinfo 2]]
-		$locktokenhref appendChild [$d createTextNode [lindex $lockinfo 3]]
-		$locktoken appendChild $locktokenhref
+                $timeout appendChild [$d createTextNode Second-$lock_timeout_left]
+                $owner appendChild [$d createTextNode [lindex $lockinfo 2]]
+                $locktokenhref appendChild [$d createTextNode [lindex $lockinfo 3]]
+                $locktoken appendChild $locktokenhref
 
-		$activelock appendChild $locktype
-		$activelock appendChild $lockscope
-		$activelock appendChild $depth
-		$activelock appendChild $timeout
-		$activelock appendChild $owner
-		$activelock appendChild $locktoken
+                $activelock appendChild $locktype
+                $activelock appendChild $lockscope
+                $activelock appendChild $depth
+                $activelock appendChild $timeout
+                $activelock appendChild $owner
+                $activelock appendChild $locktoken
 
-		$lockdiscovery appendChild $activelock
-	    }
-	}
+                $lockdiscovery appendChild $activelock
+            }
+        }
 
-	$prop appendChild $lockdiscovery
-	$propstat appendChild $prop	
+        $prop appendChild $lockdiscovery
+        $propstat appendChild $prop     
 
-	set status [$d createElement D:status]
-	set status_text [$d createTextNode "HTTP/1.1 200 OK"]
+        set status [$d createElement D:status]
+        set status_text [$d createTextNode "HTTP/1.1 200 OK"]
 
-	$status appendChild $status_text
-	$propstat appendChild $status
+        $status appendChild $status_text
+        $propstat appendChild $status
 
 
-	}
+        }
     
 
     set body [$d asXML -escapeNonASCII]
@@ -1485,18 +1488,18 @@ proc tdav::conn {args} {
         set var [lindex $args 1]
     }
     switch -- $flag {
-	-set {
-	    set value [lindex $args 2]
-	    set tdav_conn($var) $value
-	    return $value
-	}
+        -set {
+            set value [lindex $args 2]
+            set tdav_conn($var) $value
+            return $value
+        }
         -get {
             if { [info exists tdav_conn($var)] } {
                 return $tdav_conn($var)
-	    } else {
-		return [ns_conn $var]
-	    }		    
-	}
+            } else {
+                return [ns_conn $var]
+            }               
+        }
     }
 }
 
@@ -1509,19 +1512,19 @@ proc tdav::apply_filters {{uri "/*"} {options "OPTIONS GET HEAD POST DELETE TRAC
 
     set required_options [list OPTIONS PROPFIND PROPPATCH MKCOL GET HEAD POST]
     foreach required_option $required_options {
-	if {[lsearch -exact [string toupper $options] $required_option] < 0} {
-	    ns_log error "Required option $required_option missing from tDAV options for URI '$uri'.
+        if {[lsearch -exact [string toupper $options] $required_option] < 0} {
+            ns_log error "Required option $required_option missing from tDAV options for URI '$uri'.
 Required web dav options are: '$required_options'."
-	    return
-	}
+            return
+        }
     }
     set allowed_options [list OPTIONS COPY DELETE GET HEAD MKCOL MOVE LOCK POST PROPFIND PROPPATCH PUT TRACE UNLOCK]
     foreach option $options {
-	if {[lsearch -exact $allowed_options [string toupper $option]] < 0} {
-	    ns_log error "Option $option is not an allowed tDAV option for URI '$uri'.
+        if {[lsearch -exact $allowed_options [string toupper $option]] < 0} {
+            ns_log error "Option $option is not an allowed tDAV option for URI '$uri'.
 Allowed web dav options are: '$allowed_options'."
-	    return
-	}
+            return
+        }
     }    
 
     # Register filters for selected tDAV options. Do not register a
@@ -1531,9 +1534,9 @@ Allowed web dav options are: '$allowed_options'."
     # url matching for registered filters
     set filter_uri "[string trimright $uri /*]*"
     foreach option $options {
-	if {[lsearch -exact [list GET POST HEAD] $option] < 0} {
-	    ns_log debug "tDAV registering filter for $filter_uri on $option"
-	    ns_register_filter postauth [string toupper $option] "${filter_uri}" tdav::filter_webdav_[string tolower $option]
+        if {[lsearch -exact [list GET POST HEAD] $option] < 0} {
+            ns_log debug "tDAV registering filter for $filter_uri on $option"
+            ns_register_filter postauth [string toupper $option] "${filter_uri}" tdav::filter_webdav_[string tolower $option]
         }
     }
     ns_log notice "tDAV: Registered filters on $filter_uri"
@@ -1542,16 +1545,16 @@ Allowed web dav options are: '$allowed_options'."
     # proc for OPTIONS, GET, POST or HEAD.
 
     if {[string equal "true" $enable_filesystem]} {    
-	
-	foreach option $options {
-	    if {[lsearch -exact [list OPTIONS GET POST HEAD] $option] < 0} {
-		ns_log debug "tDAV registering proc for $uri on $option"
-		ns_register_proc [string toupper $option] "${uri}" tdav::webdav_[string tolower $option]
-	    }
-	}
-	ns_log notice "tDAV: Registered procedures on $uri"
+        
+        foreach option $options {
+            if {[lsearch -exact [list OPTIONS GET POST HEAD] $option] < 0} {
+                ns_log debug "tDAV registering proc for $uri on $option"
+                ns_register_proc [string toupper $option] "${uri}" tdav::webdav_[string tolower $option]
+            }
+        }
+        ns_log notice "tDAV: Registered procedures on $uri"
     } else {
-	ns_log notice "tDAV: Filesystem access by WebDAV disabled"
+        ns_log notice "tDAV: Filesystem access by WebDAV disabled"
     }
     # Store the tDAV properties in an nsv set so that the registerd
     # filters and procedures don't have to read the config file
@@ -1577,45 +1580,45 @@ proc tdav::remove_user {user} {
 
 proc tdav::allow_user {uri user} {
     foreach {share_uri options} [nsv_array get tdav_options] {
-	if {[regexp $share_uri $uri]} {
-	    foreach option $options {
-		ns_perm allowuser [string toupper $option] ${uri} $user
-	    }
-	    break
-	}
+        if {[regexp $share_uri $uri]} {
+            foreach option $options {
+                ns_perm allowuser [string toupper $option] ${uri} $user
+            }
+            break
+        }
     }
 }
 
 proc tdav::deny_user {uri user} {
     foreach {share_uri options} [nsv_array get tdav_options] {
-	if {[regexp $share_uri $uri]} {
-	    foreach option $options {
-		ns_perm denyuser [string toupper $option] ${uri} $user
-	    }
-	    break
-	}
+        if {[regexp $share_uri $uri]} {
+            foreach option $options {
+                ns_perm denyuser [string toupper $option] ${uri} $user
+            }
+            break
+        }
     }
 }
 
 proc tdav::allow_group {uri group} {
     foreach {share_uri options} [nsv_array get tdav_options] {
-	if {[regexp $share_uri $uri]} {
-	    foreach option $options {
-		ns_perm allowgroup [string toupper $option] ${uri} $group
-	    }
-	    break
-	}
+        if {[regexp $share_uri $uri]} {
+            foreach option $options {
+                ns_perm allowgroup [string toupper $option] ${uri} $group
+            }
+            break
+        }
     }
 }
 
 proc tdav::deny_group {uri group} {
     foreach {share_uri options} [nsv_array get tdav_options] {
-	if {[regexp $share_uri $uri]} {
-	    foreach option $options {
-		ns_perm denygroup [string toupper $option] ${uri} $group
-	    }
-	    break
-	}
+        if {[regexp $share_uri $uri]} {
+            foreach option $options {
+                ns_perm denygroup [string toupper $option] ${uri} $group
+            }
+            break
+        }
     }
 }
 
