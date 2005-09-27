@@ -158,17 +158,17 @@ ad_proc oacs_dav::authorize { args } {
                                         -object_id $item_id \
                                         -party_id $user_id \
                                         -privilege "read"] \
-                              && ([permission::permission_p \
-                                      -object_id [oacs_dav::conn dest_parent_id ] \
-                                      -party_id $user_id \
-                                      -privilege "create"] \
-                                      || [permission::permission_p \
-                                              -object_id [oacs_dav::conn dest_parent_id ] \
-                                             -party_id $user_id \
-                                              -privilege "write"])]
+				  && [permission::permission_p \
+					  -object_id [oacs_dav::conn dest_parent_id ] \
+					  -party_id $user_id \
+					  -privilege "create"]\
+				  || [permission::permission_p \
+					  -object_id [oacs_dav::conn dest_parent_id ] \
+					  -party_id $user_id \
+					  -privilege "write"]]
         }
         propfind {
-            if {!$user_id} {
+            if {[empty_string_p $user_id]} {
                 ns_returnunauthorized
             } else {
                 set authorized_p [permission::permission_p \
