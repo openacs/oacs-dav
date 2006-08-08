@@ -16,7 +16,7 @@ set prefix [parameter::get \
 		-default "/dav"]
 
 set url "${prefix}/*"
-set filter_url "${prefix}*"
+set filter_url "${prefix}/*"
 ns_register_filter preauth GET ${filter_url} oacs_dav::authorize
 ns_register_filter preauth HEAD ${filter_url} oacs_dav::authorize
 ns_register_filter preauth PUT ${filter_url} oacs_dav::authorize

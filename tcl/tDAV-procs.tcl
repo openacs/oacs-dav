@@ -373,7 +373,7 @@ proc tdav::check_lock {uri} {
     regsub {^/} $uri {} uri
     # if lock exists, work.  if not, just return.
     if {[file exists [tdav::get_lock_file $uri]]} {
-       set lockinfo [tdav::read_lock $uri]
+	  set lockinfo [tdav::read_lock $uri]
 
 	# check if lock is expired
 	if {[tdav::lock_timeout_left [lindex $lockinfo 4] [lindex $lockinfo 6]] == 0 } {
@@ -545,7 +545,7 @@ proc tdav::filter_webdav_proppatch {args} {
 	} else {
 	    set name [$p localName]
 	}
-       if {[catch {set value [[$p childNodes] nodeValue]}]} {
+	if {[catch {set value [[$p childNodes] nodeValue]}]} {
 	    set value ""
 	}
 	lappend prop_req remove [list [list $ns $name] $value]
@@ -702,7 +702,7 @@ proc tdav::update_user_props {uri prop_req} {
 		} else {
 		    lappend status [list "HTTP/1.1 200 OK" $k]
 		}
-		
+
 	    }
 	    remove {
 		#according to WebDAV spec removing a nonexistent
@@ -991,7 +991,7 @@ proc tdav::webdav_copy {} {
     } else {
 	if {[file exists $local_dest]} {
 	    if {![string equal "unlocked" [tdav::check_lock $dest]]} {
-		#	    ns_return 423 {text/plain} {Resource is locked.}
+		#           ns_return 423 {text/plain} {Resource is locked.}
 		set ret_code 423
 		set body "Resource is locked."
 	    } else {
@@ -1048,7 +1048,7 @@ proc tdav::webdav_move { args } {
 	set ret_code 404
     } else {
 	if {![string equal "unlocked" [tdav::check_lock $uri]]} {
-#	    ns_return 423 {text/plain} {Resource is locked.}
+#         ns_return 423 {text/plain} {Resource is locked.}
 	    set ret_code 423
 	    set body "Resource is locked."
 	} elseif [file exists $local_dest] {
@@ -1109,7 +1109,7 @@ proc tdav::set_lock {uri depth type scope owner {timeout ""} {locktime ""} } {
 	set timeout [ns_config "ns/server/[ns_info server]/tdav" "defaultlocktimeout" "300"]
     }
     if {[string equal "" $locktime]} {
-	set locktime [clock format [clock seconds]]
+	set locktime [clock format [clock seconds] -format "%T %D"]
     }
     set token "opaquelocktoken:[ns_rand 2147483647]"
     set lock [list $type $scope $owner $token $timeout $depth $locktime]
@@ -1276,8 +1276,8 @@ proc tdav::respond::proppatch { response } {
     set href ""
     set body [subst {<?xml version="1.0" encoding="utf-8" ?>
 	<D:multistatus xmlns:D="DAV:">
-	    <D:response xmlns:ns0="DAV:">
-	    <D:href>[ns_conn location]${href}</D:href>
+	<D:response xmlns:ns0="DAV:">
+	<D:href>[ns_conn location]${href}</D:href>
     }]
 
     foreach res [lindex $response 1] {
@@ -1288,7 +1288,7 @@ proc tdav::respond::proppatch { response } {
 	    <D:prop><$name xmlns='$ns'/></D:prop>
 	    <D:status>$status</D:status>
 	    </D:propstat>
-	}]
+        }]
     }
     append body {</D:response>
 	</D:multistatus>}
@@ -1378,7 +1378,7 @@ proc tdav::respond::propfind { response } {
 
 		$pnode setAttribute "b:dt" "dateTime.tz"
 
-	    }
+            }
 
 	    if {[string equal "getlastmodified" $name]} {
 
@@ -1387,12 +1387,12 @@ proc tdav::respond::propfind { response } {
 	    }
 
             if {[string equal "D:collection" $j]} {
-
-	        $pnode appendChild [$d createElement $j]
+		
+		$pnode appendChild [$d createElement $j]
 
 	    } else {
-
-	        $pnode appendChild [$d createTextNode $j]
+		
+		$pnode appendChild [$d createTextNode $j]
 
 	    }
 
@@ -1495,7 +1495,7 @@ proc tdav::conn {args} {
                 return $tdav_conn($var)
 	    } else {
 		return [ns_conn $var]
-	    }		    
+	    }               
 	}
     }
 }
