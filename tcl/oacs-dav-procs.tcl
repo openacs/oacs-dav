@@ -64,19 +64,31 @@ ad_proc oacs_dav::set_user_id {} {
         
         
         ns_log debug "\nTDAV 5.0 authentication"
+	# check all authorities 
+	foreach authority [auth::authority::get_authority_options] {
+	    set authority_id [lindex $authority 1]
         array set auth [auth::authenticate \
                             -username $user \
-                            -password $password]
-        if {![string equal $auth(auth_status) "ok"]} {
-            array set auth [auth::authenticate \
-                                -email $user \
-                                -password $password]
-            if {![string equal $auth(auth_status) "ok"]} {
-                ns_log debug "\nTDAV 5.0 auth status $auth(auth_status)"
-                        ns_returnunauthorized
-                        return 0
-            }
-        }
+                            -password $password \
+			    -authority_id $authority_id \
+			    -no_cookie]
+	    if {![string equal $auth(auth_status) "ok"]} {
+		array set auth [auth::authenticate \
+				    -email $user \
+				    -password $password \
+				    -authority_id $authority_id \
+				    -no_cookie]
+	    }
+	    if {[string equal $auth(auth_status) "ok"]} {
+		# we can stop checking
+		break
+	    }
+	}
+	if {![string equal $auth(auth_status) "ok"]} {
+	    ns_log debug "\nTDAV 5.0 auth status $auth(auth_status)"
+	    ns_returnunauthorized
+	    return 0
+	}
         ns_log debug "\nTDAV: auth_check openacs 5.0 user_id= $auth(user_id)"
         ad_conn -set user_id $auth(user_id)
 
