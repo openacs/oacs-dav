@@ -281,8 +281,8 @@ proc tdav::dbm_read_list {uri} {
     set f [open [tdav::get_prop_file $uri] {CREAT RDONLY}]
     fconfigure $f -encoding utf-8
     set s [read $f]
-    set l $s
-    return $l
+    close $f
+    return $s
 }
 
 # tdav::read_lock
