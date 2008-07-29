@@ -1319,7 +1319,7 @@ proc tdav::respond::mkcol { response } {
 # </head><body>
 # <h1>Created</h1>
 # <p>Collection [ns_conn url] has been created.</p>
-# <hr />
+# <hr>
 # <address></address>
 # 	</body></html>"
 
