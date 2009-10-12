@@ -14,7 +14,7 @@ create table dav_site_node_folder_map (
                         references site_nodes on delete cascade,
         folder_id       integer
                         constraint dav_impls_folder_id_fk
-                        references cr_folders,
+                        references cr_folders on delete cascade,
 	enabled_p	char(1)
 			constraint dav_sn_folder_map_enbld_p_bl
 			check (enabled_p in ('t','f'))
