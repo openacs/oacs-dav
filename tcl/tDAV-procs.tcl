@@ -124,7 +124,7 @@ proc tdav::read_xml {} {
     seek $fp 0
     set xml [read $fp]
     close $fp
-    ns_unlink -nocomplain $tmpfile
+    file delete $tmpfile
     ns_log debug "\n-----tdav::read_xml XML = -----\n $xml \n ----- end ----- \n "
     return $xml
 }
@@ -317,7 +317,7 @@ proc tdav::read_lock {uri} {
 #      Lock file for URI is deleted
 
 proc tdav::remove_lock {uri} {
-    ns_unlink -nocomplain [tdav::get_lock_file $uri]
+    file delete [tdav::get_lock_file $uri]
 }
 
 # tdav::dbm_write_array
@@ -881,7 +881,6 @@ proc tdav::webdav_delete {} {
 	# 423's and returns:
 	if {[string equal unlocked [tdav::check_lock $uri]]} {
 	    file delete -force -- $entry
-	    ns_unlink -nocomplain $entry
 	    tdav::delete_props $uri
 	    tdav::remove_lock $uri
 	    set ret_code 204
