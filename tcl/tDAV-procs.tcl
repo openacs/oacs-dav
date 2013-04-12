@@ -173,7 +173,7 @@ proc tdav::get_prop_file {uri} {
     set name [ns_config "ns/server/[ns_info server]/tdav" propdir]
 
     if {[string equal "" $name]} {
-	set name [file join [ns_info pageroot] "../propdir/${uri}"]
+	set name [file join $::acs::pageroot "../propdir/${uri}"]
     } else {
 	set name [file join $name $uri]
     }
@@ -205,7 +205,7 @@ proc tdav::get_lock_file {uri} {
     set name [ns_config "ns/server/[ns_info server]/tdav" lockdir]
 
     if {[string equal "" $name]} {
-	set name [file join [ns_info pageroot] "../lockdir/${uri}"]
+	set name [file join $::acs::pageroot "../lockdir/${uri}"]
     } else {
 	set name [file join $name $uri]
     }
@@ -591,7 +591,7 @@ proc tdav::filter_webdav_proppatch {args} {
 proc tdav::webdav_proppatch {} {
     set uri [ns_conn url]
     regsub {^/} $uri {} uri    
-    set filename [file join [ns_info pageroot] $uri]
+    set filename [file join $::acs::pageroot $uri]
     set body ""
     set ret_code 200
     if {![file exists $filename]} {
@@ -640,16 +640,16 @@ proc tdav::webdav_propfind {} {
     # wait, no, this is right as long as the DAV request is correct
     # so fuck it
     if {$depth > 0} {
-	set entries [glob -nocomplain [file join [ns_info pageroot] $uri *]]
+	set entries [glob -nocomplain [file join $::acs::pageroot $uri *]]
     } else {
-	set entries [glob -nocomplain [file join [ns_info pageroot] $uri]]
+	set entries [glob -nocomplain [file join $::acs::pageroot $uri]]
     }
     
     foreach entry $entries {
 	set entry_props [list]
 	set filename [lindex [file split $entry] end]
 	# Tcl befuddles me:
-	set href [string replace $entry 1 [string length [ns_info pageroot]] ""]
+	set href [string replace $entry 1 [string length $::acs::pageroot] ""]
 	file stat $entry file_stat
 	set collection_p [string equal "directory" $file_stat(type)]
 
@@ -749,7 +749,7 @@ proc tdav::filter_webdav_propfind {args} {
     # test for url existence
 
     regsub {^/} [ns_conn url] {} uri
-    set entry [file join [ns_info pageroot] $uri]
+    set entry [file join $::acs::pageroot $uri]
     # parse the xml body to check if its valid
     if {![string equal "" $xml] && [catch {dom parse $xml} xd]} {
 	ns_return 400 text/plain "XML request not well-formed."
@@ -817,7 +817,7 @@ proc tdav::filter_webdav_put {args} {
 proc tdav::webdav_put {} {
     set uri [ns_conn url]
     set uri [string trimleft $uri "/"]
-    set entry [file join [ns_info pageroot] $uri]
+    set entry [file join $::acs::pageroot $uri]
     set filename [lindex [file split $entry] end]
     set tmpfile [tdav::conn tmpfile]
     set ret_code 500
@@ -871,7 +871,7 @@ proc tdav::filter_webdav_delete {args} {
 proc tdav::webdav_delete {} {
     set uri [ns_conn url]
     regsub {^/} $uri {} uri
-    set entry [file join [ns_info pageroot] $uri]
+    set entry [file join $::acs::pageroot $uri]
     set filename [lindex [file split $entry] end]
 
     set ret_code 500
@@ -937,7 +937,7 @@ proc tdav::webdav_mkcol {} {
     set uri [ns_conn url]
     regsub {^/} $uri {} uri
     
-    set entry [file join [ns_info pageroot] $uri]
+    set entry [file join $::acs::pageroot $uri]
     set filename [lindex [file split $entry] end]
     regsub {/[^/]*/*$} $entry {} parent_dir
 
@@ -945,7 +945,7 @@ proc tdav::webdav_mkcol {} {
 	set ret_code 409
     } elseif ![file exists $entry] {
 	file mkdir $entry
-	file mkdir [file join [ns_info pageroot] "../props/" $uri]
+	file mkdir [file join $::acs::pageroot "../props/" $uri]
 	set ret_code 201
     } else {
 	set ret_code 405
@@ -971,19 +971,19 @@ proc tdav::webdav_copy {} {
 
     set dest [tdav::conn destination]
    
-    set local_dest [ns_info pageroot]
+    set local_dest $::acs::pageroot
     append local_dest $dest
-    set newuri [string replace $local_dest 1 [string length [ns_info pageroot]] ""]
+    set newuri [string replace $local_dest 1 [string length $::acs::pageroot] ""]
     regsub {^/} $newuri {} newuri
 
     set uri [ns_conn url]
     regsub {^/} $uri {} uri
     
-    set entry [file join [ns_info pageroot] $uri]
+    set entry [file join $::acs::pageroot $uri]
     set filename [lindex [file split $entry] end]
 
     regsub {^/} [ns_conn url] {} uri
-    set entry [file join [ns_info pageroot] $uri]
+    set entry [file join $::acs::pageroot $uri]
     
     if {![file exists $entry]} {
 	set ret_code 404
@@ -1029,15 +1029,15 @@ proc tdav::webdav_move { args } {
     set overwrite [tdav::conn overwrite]
     set dest [tdav::conn destination]
     set uri [ns_conn url]
-    set local_dest [ns_info pageroot]
+    set local_dest $::acs::pageroot
     append local_dest $dest
-    set newuri [string replace $local_dest 1 [string length [ns_info pageroot]] ""]
+    set newuri [string replace $local_dest 1 [string length $::acs::pageroot] ""]
     regsub {^/} $newuri {} newuri
 
     set uri [ns_conn url]
     regsub {^/} $uri {} uri
     
-    set entry [file join [ns_info pageroot] $uri]
+    set entry [file join $::acs::pageroot $uri]
     set filename [lindex [file split $entry] end]
     
     set ret_code 500
@@ -1123,7 +1123,7 @@ proc tdav::webdav_lock {} {
     set owner [tdav::conn lock_owner]
     set uri [ns_conn url]
     regsub {^/} $uri {} uri
-    set entry [file join [ns_info pageroot] $uri]
+    set entry [file join $::acs::pageroot $uri]
     set filename [lindex [file split $entry] end]
     set existing_lock_token [tdav::conn lock_token]
 #    if {![file exists $entry]} {
@@ -1165,7 +1165,7 @@ proc tdav::filter_webdav_unlock {args} {
 proc tdav::webdav_unlock {} {
     set uri [ns_conn url]
     regsub {^/} $uri {} uri
-    set entry [file join [ns_info pageroot] $uri]
+    set entry [file join $::acs::pageroot $uri]
     set filename [lindex [file split $entry] end]
 
     if {![file exists $entry]} {
