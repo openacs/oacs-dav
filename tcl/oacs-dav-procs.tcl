@@ -414,14 +414,14 @@ ad_proc -public oacs_dav::handle_request { uri method args } {
                     if {![acs_sc_binding_exists_p dav_mkcol_type $package_key]} {
                         set content_type "content_folder"
                     } else {
-                        set content_type [acs_sc_call dav_mkcol_type get_type "" $package_key]
+                        set content_type [acs_sc::invoke -contract dav_mkcol_type -operation get_type -call_args "" -impl $package_key]
                     }
                 }
                 put {
                     if {![acs_sc_binding_exists_p dav_put_type $package_key]} {
                         set content_type "content_revision"
                     } else {
-                        set content_type [acs_sc_call dav_put_type get_type "" $package_key]
+                        set content_type [acs_sc::invoke -contract dav_put_type -operation get_type -call_args "" -impl $package_key]
                     }
 
                 } 
@@ -467,7 +467,7 @@ ad_proc -public oacs_dav::handle_request { uri method args } {
 
     ns_log debug "\noacs_dav::handle_request method $method uri $uri item_id $item_id folder_id $folder_id package_id $package_id node_id $node_id content_type $content_type args $args"
 
-    set response [acs_sc_call dav $method "" $content_type]
+    set response [acs_sc::invoke -contract dav -operation $method -call_args "" -impl $content_type]
 
     # here the sc impl might return us some data,
     # then we would probably have to send that to tDAV for processing
