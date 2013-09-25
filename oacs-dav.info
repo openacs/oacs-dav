@@ -13,6 +13,7 @@
         <summary>Provides services to enable webDAV access to content repository items.</summary>
         <release-date>2013-09-08</release-date>
         <vendor>OpenACS</vendor>
+        <maturity>1</maturity>
         <description format="text/html">An interface to the tDAV webDAV package. oacs-dav provides services to offer webDAV access to content repository data.</description>
 
         <provides url="oacs-dav" version="1.2.0d2"/>
