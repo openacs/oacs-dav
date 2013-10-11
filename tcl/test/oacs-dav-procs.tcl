@@ -21,7 +21,7 @@ aa_register_case oacs_dav_sc_create {
 	    set sc_ops [db_list get_dav_ops ""]
 	    set valid_ops [list get put mkcol copy propfind proppatch move delete]
 	    foreach op_name $valid_ops {
-		aa_true "$op_name operation created" [expr [lsearch $sc_ops $op_name] > -1]
+		aa_true "$op_name operation created" [expr {[lsearch $sc_ops $op_name] > -1}]
 	    }
 
     	    aa_true "DAV put_type Service contract created" [expr [db_0or1row get_dav_pt_sc ""]]
@@ -61,9 +61,9 @@ aa_register_case oacs_dav_put {
 	    aa_log "Response was $response"
 	    set new_item_id [db_string item_exists "" -default ""]
 	    aa_log "Item_id=$new_item_id"
-	    aa_true "Content Item Created" [expr ![empty_string_p $new_item_id]]
+	    aa_true "Content Item Created" [expr {$new_item_id ne ""}] 
 	    set revision_id [db_string revision_exists "" -default ""]	    
-	    aa_true "Content Revision Created"  [expr ![empty_string_p $revision_id]]
+	    aa_true "Content Revision Created"  [expr {$revision_id ne ""}] 
 	    set cr_filename "[cr_fs_path]/[db_string get_content_filename ""]"
 	    aa_true "Content Attribute Set" [string equal [file size [oacs_dav::conn tmpfile]] [file size $cr_filename]]
 	    
@@ -98,7 +98,7 @@ aa_register_case oacs_dav_mkcol {
 		aa_log "name $fname uri $uri"
 		set response [oacs_dav::impl::content_folder::mkcol]
 		set new_folder_id [db_string folder_exists "" -default ""]
-		aa_true "Content Folder $fname created" [expr ![empty_string_p $new_folder_id]]
+		aa_true "Content Folder $fname created" [expr {$new_folder_id ne ""}] 
 	    }
 	
 	}
