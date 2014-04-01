@@ -115,7 +115,7 @@ proc tdav::xml_valid_p {xml_doc} {
 proc tdav::read_xml {} {
     set fp ""
     while {$fp eq ""} {
-	set tmpfile [ns_tmpnam]
+	set tmpfile [ad_tmpnam]
 	set fp [ns_openexcl $tmpfile]
     }
     #fconfigure $fp -translation binary -encoding binary
@@ -791,7 +791,7 @@ proc tdav::filter_webdav_propfind {args} {
 
 proc tdav::filter_webdav_put {args} {
 
-    set tmpfile [ns_tmpnam]
+    set tmpfile [ad_tmpnam]
     set fd [open $tmpfile w+]
     ns_writecontent $fd
     close $fd
