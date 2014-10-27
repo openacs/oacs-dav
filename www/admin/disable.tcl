@@ -8,7 +8,7 @@ ad_page_contract {
     @creation-date 2004-02-15
     @cvs-id $Id$
 } {
-    folder_id:integer,multiple
+    folder_id:naturalnum,multiple
 } -properties {
 } -validate {
 } -errors {
