@@ -4,18 +4,18 @@
 <master>
 
 <body>
-<h2>OpenACS WebDAV Support</h2><h3>Introduction</h3><p>This package implements a WebDAV interface to the OpenACS
+<h1>OpenACS WebDAV Support</h1><h2>Introduction</h2><p>This package implements a WebDAV interface to the OpenACS
 Content Repository. In addition to generic access to content items,
 there is a service-contract interface so packages can define custom
 handlers for WebDAV methods for objects that belong to that
-package.</p><h3>Installation</h3><p>Install through the APM. If you install file-storage, WebDAV
+package.</p><h2>Installation</h2><p>Install through the APM. If you install file-storage, WebDAV
 support is installed automatically. In addtion you should check the
 tDAV specific configuration parameters to the AOLserver
 configuration file. The default parameters work fine, they will
 create webdav URLs like <i>yoursite/</i>dav/*</p><p>You can visit the <a href="/webdav-support/">/webdav-support/</a> page to control webdav
 access on a per-folder basis. Packages that support WebDAV will add
 folders to this list and an administrator can then activate or
-deactivate the folders.</p><h3>How it Works</h3><p>OpenACS WebDAV Support requires the tDAV AOLserver module to
+deactivate the folders.</p><h2>How it Works</h2><p>OpenACS WebDAV Support requires the tDAV AOLserver module to
 implement most of the WebDAV protocol. OpenACS WebDAV Support just
 provides and interface between tDAV and the Content Repository</p><p>Each content_type that requires a custom handler much implement
 the <code>dav</code> service contract. Each content type should
@@ -33,7 +33,7 @@ through WebDAV. Each package should implement the
 named the same as the package key.</p><p>Each package instance that will allow WebDAV access should
 register a package_id and folder_id for the root content_folder
 that corresponds with the URI of the package's mount point using
-<code>oacs_dav::register_folder</code>.</p><h3>Dispatching Requests</h3><p>A preauth filter is registered for all WebDAV methods. This
+<code>oacs_dav::register_folder</code>.</p><h2>Dispatching Requests</h2><p>A preauth filter is registered for all WebDAV methods. This
 calls oacs_dav::authorize which will set oacs_dav::conn user_id to
 the OpenACS user_id or 0 is the request is not authenticated. This
 filter also calls oacs_dav::setup_conn sets up the basic
@@ -60,5 +60,5 @@ the request is called. For file-storage this returns
 file_storage_objects instead of generic content_revisions.</p><p>The service contract implementation for each operation must
 return the response data in the format required by tDAV. The
 documentation for the tdav::respond::* procedures named for each
-method describe what is required.</p>
+method describe what is required.</p><h2>Release Notes</h2><p>Please file bugs in the <a href="http://openacs.org/bugtracker/openacs/">Bug Tracker</a>.</p>
 </body>
