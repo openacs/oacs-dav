@@ -45,3 +45,9 @@ db_multirow -extend {folder_url package_key package_name status} folders get_fol
 set title [_ oacs-dav.WebDAV_Folder_Administration]
 set context $title
 ad_return_template
+
+# Local variables:
+#    mode: tcl
+#    tcl-indent-level: 4
+#    indent-tabs-mode: nil
+# End:

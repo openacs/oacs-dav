@@ -26,3 +26,8 @@ foreach id $folder_id {
 }
 util_user_message -message [_ oacs-dav.Folders_Disabled]
 ad_returnredirect "."
+# Local variables:
+#    mode: tcl
+#    tcl-indent-level: 4
+#    indent-tabs-mode: nil
+# End:

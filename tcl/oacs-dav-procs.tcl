@@ -1253,3 +1253,9 @@ ad_proc oacs_dav::impl::content_revision::unlock {} {
 
     return [list $ret_code $body]
 }
+
+# Local variables:
+#    mode: tcl
+#    tcl-indent-level: 4
+#    indent-tabs-mode: nil
+# End:

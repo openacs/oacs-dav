@@ -42,3 +42,9 @@ ns_register_proc MKCOL ${url} oacs_dav::handle_request
 ns_register_proc MOVE ${url} oacs_dav::handle_request
 ns_register_proc LOCK ${url} oacs_dav::handle_request
 ns_register_proc UNLOCK ${url} oacs_dav::handle_request
+
+# Local variables:
+#    mode: tcl
+#    tcl-indent-level: 4
+#    indent-tabs-mode: nil
+# End:
