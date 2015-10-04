@@ -11,13 +11,13 @@
     <version name="1.2.0d3" url="http://openacs.org/repository/download/apm/oacs-dav-1.2.0d3.apm">
         <owner url="mailto:dave@thedesignexperience.org">Dave Bauer</owner>
         <summary>Provides services to enable webDAV access to content repository items.</summary>
-        <release-date>2015-09-25</release-date>
+        <release-date>2015-10-04</release-date>
         <vendor>OpenACS</vendor>
         <maturity>1</maturity>
         <description format="text/html">An interface to the tDAV webDAV package. oacs-dav provides services to offer webDAV access to content repository data.</description>
 
         <provides url="oacs-dav" version="1.2.0d3"/>
-	<requires url="acs-kernel" version="5.9.0b1"/>
+	<requires url="acs-kernel" version="5.9.0b2"/>
 
         <callbacks>
             <callback type="after-install"  proc="oacs_dav::install::package_install"/>
