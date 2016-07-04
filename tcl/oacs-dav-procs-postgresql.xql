@@ -14,16 +14,12 @@
             from cr_items c1, cr_items c2
             where c2.item_id = :item_id
             and c1.tree_sortkey between c2.tree_sortkey and tree_right(c2.tree_sortkey)
-            and not  exists (select 1
-                   from acs_object_party_privilege_map m
-                   where m.object_id = cr_items.item_id
-                     and m.party_id = :user_id
-                     and m.privilege = :privilege)
+	    and acs_permission__permission_p(cr_items.item_id, :user_id, :privilege)
+
     </querytext>
   </fullquery>
  
-  <fullquery
-    name="oacs_dav::impl::content_folder::propfind.get_properties">
+  <fullquery name="oacs_dav::impl::content_folder::propfind.get_properties">
     <querytext>
       select
       coalesce (cr.content_length,0) as content_length,
@@ -41,16 +37,13 @@
         cr_items ci2,
         acs_objects o
       where
-        ci1.live_revision = cr.revision_id and
-        ci1.tree_sortkey between ci2.tree_sortkey and tree_right(ci2.tree_sortkey) and
-        ci2.item_id=:folder_id and
-        ci1.item_id = o.object_id and
-        (tree_level(ci1.tree_sortkey) - tree_level(ci2.tree_sortkey)) <= :depth :: integer and
-        exists (select 1
-                  from acs_object_party_privilege_map m
-                  where m.object_id = ci1.item_id
-                  and m.party_id = :user_id
-                  and m.privilege = 'read')
+         ci1.live_revision = cr.revision_id
+	 and ci1.tree_sortkey between ci2.tree_sortkey and tree_right(ci2.tree_sortkey)
+	 and ci2.item_id=:folder_id
+	 and ci1.item_id = o.object_id
+	 and (tree_level(ci1.tree_sortkey) - tree_level(ci2.tree_sortkey)) <= :depth ::integer
+	 and acs_permission__permission_p(ci1.item_id, :user_id, 'read')
+
       union
       select 0 as content_length,
         '*/*' as mime_type,
@@ -66,16 +59,12 @@
         cr_items ci2,
         acs_objects o
       where
-        ci1.tree_sortkey between ci2.tree_sortkey and tree_right(ci2.tree_sortkey) and
-        ci2.item_id=:folder_id and
-        ci1.item_id = o.object_id and
-        (tree_level(ci1.tree_sortkey) - tree_level(ci2.tree_sortkey)) <= :depth :: integer and
-        exists (select 1
-                  from acs_object_party_privilege_map m
-                  where m.object_id = ci1.item_id
-                  and m.party_id = :user_id
-                  and m.privilege = 'read') and
-        not exists (select 1
+        ci1.tree_sortkey between ci2.tree_sortkey and tree_right(ci2.tree_sortkey)
+	and ci2.item_id = :folder_id
+	and ci1.item_id = o.object_id
+	and (tree_level(ci1.tree_sortkey) - tree_level(ci2.tree_sortkey)) <= :depth ::integer
+	and acs_permission__permission_p(ci1.item_id, :user_id, 'read')
+        and not exists (select 1
                   from cr_revisions cr
                   where cr.revision_id = ci1.live_revision)
     </querytext>
@@ -98,12 +87,8 @@
       where 
       ci.item_id=:item_id
       and ci.item_id = o.object_id
-      and cr.revision_id=ci.live_revision
-      and exists (select 1
-                  from acs_object_party_privilege_map m
-                  where m.object_id = ci.item_id
-                  and m.party_id = :user_id
-                  and m.privilege = 'read')
+      and cr.revision_id = ci.live_revision
+      and acs_permission__permission_p(ci.item_id, :user_id, 'read')
     </querytext>
   </fullquery>
 
@@ -281,5 +266,14 @@
     </querytext>
   </fullquery>
 
+  <fullquery name="oacs_dav::children_have_permission_p.revision_perms">
+    <querytext>
+      select count(*)
+      from cr_revisions
+      where item_id = :item_id
+      and not acs_permission__permission_p(revision_id, :user_id, 'delete')
+    </querytext>
+  </fullquery>
+  
 </queryset>
 
