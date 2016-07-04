@@ -39,8 +39,8 @@ through WebDAV. Each package should implement the
 named the same as the package key.</p>
 <p>Each package instance that will allow WebDAV access should
 register a package_id and folder_id for the root content_folder
-that corresponds with the URI of the package's mount point using
-<code>oacs_dav::register_folder</code>.</p>
+that corresponds with the URI of the package&#39;s mount point
+using <code>oacs_dav::register_folder</code>.</p>
 <h2>Dispatching Requests</h2>
 <p>A preauth filter is registered for all WebDAV methods. This
 calls oacs_dav::authorize which will set oacs_dav::conn user_id to
@@ -68,8 +68,8 @@ the method is not PUT, a 404 error should be returned.</p>
 implemenation for the content_type of the item. If the request is a
 PUT, first the dav_put_type service contract for the package_key of
 the request is called. For file-storage this returns
-"file_storage_object" so items created by PUT are created as
-file_storage_objects instead of generic content_revisions.</p>
+"file_storage_object" so items created by PUT are created
+as file_storage_objects instead of generic content_revisions.</p>
 <p>The service contract implementation for each operation must
 return the response data in the format required by tDAV. The
 documentation for the tdav::respond::* procedures named for each
