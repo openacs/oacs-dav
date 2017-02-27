@@ -11,7 +11,7 @@
     <version name="1.2.0d3" url="http://openacs.org/repository/download/apm/oacs-dav-1.2.0d3.apm">
         <owner url="mailto:dave@thedesignexperience.org">Dave Bauer</owner>
         <summary>Provides services to enable webDAV access to content repository items.</summary>
-        <release-date>2015-12-01</release-date>
+        <release-date>2017-02-15</release-date>
         <vendor>OpenACS</vendor>
         <maturity>1</maturity>
         <description format="text/html">An interface to the tDAV webDAV package. oacs-dav provides services to offer webDAV access to content repository data.</description>
