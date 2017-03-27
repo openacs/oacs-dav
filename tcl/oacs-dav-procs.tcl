@@ -983,7 +983,7 @@ ad_proc oacs_dav::impl::content_revision::put {} {
         set response [list 500]
         ns_log error "oacs_dav::impl::content_revision::put: $errmsg"
     }
-    file delete $tmp_filename
+    file delete -- $tmp_filename
     # at least we need to return the http_status
     return $response
 

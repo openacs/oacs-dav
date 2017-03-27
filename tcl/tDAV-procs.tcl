@@ -124,7 +124,7 @@ proc tdav::read_xml {} {
     seek $fp 0
     set xml [read $fp]
     close $fp
-    file delete $tmpfile
+    file delete -- $tmpfile
     ns_log debug "\n-----tdav::read_xml XML = -----\n $xml \n ----- end ----- \n "
     return $xml
 }
@@ -230,7 +230,7 @@ proc tdav::get_lock_file {uri} {
 
 proc tdav::delete_props {uri} {
     set entry [tdav::get_prop_file $uri]
-    catch {[file delete -force $entry]} err
+    catch {[file delete -force -- $entry]} err
     return err
 }
 
@@ -317,7 +317,7 @@ proc tdav::read_lock {uri} {
 #      Lock file for URI is deleted
 
 proc tdav::remove_lock {uri} {
-    file delete [tdav::get_lock_file $uri]
+    file delete -- [tdav::get_lock_file $uri]
 }
 
 # tdav::dbm_write_array
@@ -1055,9 +1055,9 @@ proc tdav::webdav_move { args } {
 		set ret_code 412
 	    } else {
 		set ret_code 204
-		file delete -force $local_dest
+		file delete -force -- $local_dest
 		file copy -force $entry $local_dest
-		file delete -force $entry
+		file delete -force -- $entry
 		tdav::copy_props $uri $newuri
 		tdav::delete_props $uri
 	    }
@@ -1065,7 +1065,7 @@ proc tdav::webdav_move { args } {
 	    set ret_code 201
 	    file copy $entry $local_dest
 	    tdav::copy_props $uri $newuri
-	    file delete -force $entry
+	    file delete -force -- $entry
 	    tdav::delete_props $uri
 	}
     }
