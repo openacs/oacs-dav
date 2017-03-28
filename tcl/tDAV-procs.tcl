@@ -249,7 +249,7 @@ proc tdav::delete_props {uri} {
 proc tdav::move_props {uri newuri} {
     set entry [tdav::get_prop_file $uri]
     set dest [tdav::get_prop_file $newuri]
-    catch {[file copy -force $entry $dest]}
+    catch {[file copy -force -- $entry $dest]}
 }
 
 # tdav::copy_props
@@ -268,7 +268,7 @@ proc tdav::move_props {uri newuri} {
 proc tdav::copy_props {uri newuri} {
     set entry [tdav::get_prop_file $uri]
     set dest [tdav::get_prop_file $newuri]
-    catch {[file copy -force $entry $dest]}
+    catch {[file copy -force -- $entry $dest]}
 }
 
 proc tdav::write_lock {uri list} {
@@ -998,13 +998,13 @@ proc tdav::webdav_copy {} {
 		    set ret_code 412
 		} else {
 		    set ret_code 204
-		    file copy -force $entry $local_dest
+		    file copy -force -- $entry $local_dest
 		    tdav::copy_props $uri $newuri
 		}
 	    }
 	} else {
 	    set ret_code 201
-	    file copy $entry $local_dest
+	    file copy -- $entry $local_dest
 	    tdav::copy_props $uri $newuri
 	}
     }
@@ -1056,14 +1056,14 @@ proc tdav::webdav_move { args } {
 	    } else {
 		set ret_code 204
 		file delete -force -- $local_dest
-		file copy -force $entry $local_dest
+		file copy -force -- $entry $local_dest
 		file delete -force -- $entry
 		tdav::copy_props $uri $newuri
 		tdav::delete_props $uri
 	    }
 	} else {
 	    set ret_code 201
-	    file copy $entry $local_dest
+	    file copy -- $entry $local_dest
 	    tdav::copy_props $uri $newuri
 	    file delete -force -- $entry
 	    tdav::delete_props $uri
