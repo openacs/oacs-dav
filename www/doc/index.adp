@@ -15,7 +15,7 @@ support is installed automatically. In addtion you should check the
 tDAV specific configuration parameters to the AOLserver
 configuration file. The default parameters work fine, they will
 create webdav URLs like <em>yoursite/</em>dav/*</p>
-<p>You can visit the <a href="/webdav-support/">/webdav-support/</a> page to control webdav
+<p>You can visit the /webdav-support/ page to control webdav
 access on a per-folder basis. Packages that support WebDAV will add
 folders to this list and an administrator can then activate or
 deactivate the folders.</p>
