@@ -620,7 +620,7 @@ proc tdav::webdav_proppatch {} {
 #     none
 #
 # Results:
-#     Returns a list of HTTP status for the request, and if sucessful a
+#     Returns a list of HTTP status for the request, and if successful a
 #     list of properties in the format of
 #     {href collection_p {properies_list}}
 #     where properties list is a list of pairs
@@ -635,7 +635,7 @@ proc tdav::webdav_propfind {} {
     regsub -all -- (\{|\}) $uri \\\\& uri
 
     # decide on file or directory
-    # why doesn't tcl handle this?
+    # why doesn't Tcl handle this?
     # otoh, it lets us handle the notfound error here    
     # wait, no, this is right as long as the DAV request is correct
     # so fuck it
@@ -668,7 +668,7 @@ proc tdav::webdav_propfind {} {
 
 # tdav::get_user_props
 #
-#     Retreive user properties from tDAV filesystem storage
+#     Retrieve user properties from tDAV filesystem storage
 #
 # Arguments:
 #     uri URI of the request
@@ -716,7 +716,7 @@ proc tdav::update_user_props {uri prop_req} {
 	}
 
     #filter out filesystem sets
-    # DAVEB where is this filtering occuring?
+    # DAVEB where is this filtering occurring?
 
     #write the props back out to disc:
     tdav::dbm_write_list $uri [array get props]
@@ -809,7 +809,7 @@ proc tdav::filter_webdav_put {args} {
 #     none
 #
 # Results:
-#     If sucessful file is created under AOLserver pageroot
+#     If successful file is created under AOLserver pageroot
 #     that corresponds to the URI of the request.
 #     Calls tdav::respond with a list containing HTTP status
 #     and response body to return the results to the client.
@@ -863,7 +863,7 @@ proc tdav::filter_webdav_delete {args} {
 #     none
 #
 # Results:
-#     If sucessful file corresponding to URI is removed from
+#     If successful file corresponding to URI is removed from
 #     the filesystem. In addition properties and lock files
 #     are also removed. Calls tdav::respond to return the results
 #     to the client.
@@ -1526,7 +1526,7 @@ Allowed web dav options are: '$allowed_options'."
     # Register filters for selected tDAV options. Do not register a
     # filter for GET, POST or HEAD.
 
-    # change /example/* to /example* to accomodate the
+    # change /example/* to /example* to accommodate the
     # url matching for registered filters
     set filter_uri "[string trimright $uri /*]*"
     foreach option $options {

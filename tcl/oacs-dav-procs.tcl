@@ -2,7 +2,7 @@
 ns_log debug "\nLoading oacs-dav-procs.tcl"
 ad_library {
     
-    Support for tDAV tcl webDAV implemenation
+    Support for tDAV Tcl webDAV implemenation
     
     @author Dave Bauer (dave@thedesignexperience.org)
     @creation-date 2003-09-11
@@ -89,7 +89,7 @@ ad_proc oacs_dav::set_user_id {} {
 	    ns_returnunauthorized
 	    return 0
 	}
-        ns_log debug "\nTDAV: auth_check openacs 5.0 user_id= $auth(user_id)"
+        ns_log debug "\nTDAV: auth_check OpenACS 5.0 user_id= $auth(user_id)"
         ad_conn -set user_id $auth(user_id)
 
     } else {
@@ -343,7 +343,7 @@ ad_proc -public oacs_dav::conn_setup {} {
     # we need item_id and content_type
     # we should use content::init but that has caching and  I don't
     # have time to resolve the issues that raises right now
-    # a full-featured, consistently used tcl api for CR will fix that
+    # a full-featured, consistently used Tcl api for CR will fix that
     if {[llength $urlv] > 2} {
         set parent_url [join [lrange $urlv 0 [llength $urlv]-2] "/" ]
     } else {
