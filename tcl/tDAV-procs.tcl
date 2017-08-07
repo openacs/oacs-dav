@@ -124,7 +124,7 @@ proc tdav::read_xml {} {
     seek $fp 0
     set xml [read $fp]
     close $fp
-    file delete $tmpfile
+    file delete -- $tmpfile
     ns_log debug "\n-----tdav::read_xml XML = -----\n $xml \n ----- end ----- \n "
     return $xml
 }
@@ -230,7 +230,7 @@ proc tdav::get_lock_file {uri} {
 
 proc tdav::delete_props {uri} {
     set entry [tdav::get_prop_file $uri]
-    catch {[file delete -force $entry]} err
+    catch {[file delete -force -- $entry]} err
     return err
 }
 
@@ -249,7 +249,7 @@ proc tdav::delete_props {uri} {
 proc tdav::move_props {uri newuri} {
     set entry [tdav::get_prop_file $uri]
     set dest [tdav::get_prop_file $newuri]
-    catch {[file copy -force $entry $dest]}
+    catch {[file copy -force -- $entry $dest]}
 }
 
 # tdav::copy_props
@@ -268,7 +268,7 @@ proc tdav::move_props {uri newuri} {
 proc tdav::copy_props {uri newuri} {
     set entry [tdav::get_prop_file $uri]
     set dest [tdav::get_prop_file $newuri]
-    catch {[file copy -force $entry $dest]}
+    catch {[file copy -force -- $entry $dest]}
 }
 
 proc tdav::write_lock {uri list} {
@@ -317,7 +317,7 @@ proc tdav::read_lock {uri} {
 #      Lock file for URI is deleted
 
 proc tdav::remove_lock {uri} {
-    file delete [tdav::get_lock_file $uri]
+    file delete -- [tdav::get_lock_file $uri]
 }
 
 # tdav::dbm_write_array
@@ -620,7 +620,7 @@ proc tdav::webdav_proppatch {} {
 #     none
 #
 # Results:
-#     Returns a list of HTTP status for the request, and if sucessful a
+#     Returns a list of HTTP status for the request, and if successful a
 #     list of properties in the format of
 #     {href collection_p {properies_list}}
 #     where properties list is a list of pairs
@@ -635,7 +635,7 @@ proc tdav::webdav_propfind {} {
     regsub -all -- (\{|\}) $uri \\\\& uri
 
     # decide on file or directory
-    # why doesn't tcl handle this?
+    # why doesn't Tcl handle this?
     # otoh, it lets us handle the notfound error here    
     # wait, no, this is right as long as the DAV request is correct
     # so fuck it
@@ -668,7 +668,7 @@ proc tdav::webdav_propfind {} {
 
 # tdav::get_user_props
 #
-#     Retreive user properties from tDAV filesystem storage
+#     Retrieve user properties from tDAV filesystem storage
 #
 # Arguments:
 #     uri URI of the request
@@ -716,7 +716,7 @@ proc tdav::update_user_props {uri prop_req} {
 	}
 
     #filter out filesystem sets
-    # DAVEB where is this filtering occuring?
+    # DAVEB where is this filtering occurring?
 
     #write the props back out to disc:
     tdav::dbm_write_list $uri [array get props]
@@ -809,7 +809,7 @@ proc tdav::filter_webdav_put {args} {
 #     none
 #
 # Results:
-#     If sucessful file is created under AOLserver pageroot
+#     If successful file is created under AOLserver pageroot
 #     that corresponds to the URI of the request.
 #     Calls tdav::respond with a list containing HTTP status
 #     and response body to return the results to the client.
@@ -863,7 +863,7 @@ proc tdav::filter_webdav_delete {args} {
 #     none
 #
 # Results:
-#     If sucessful file corresponding to URI is removed from
+#     If successful file corresponding to URI is removed from
 #     the filesystem. In addition properties and lock files
 #     are also removed. Calls tdav::respond to return the results
 #     to the client.
@@ -998,13 +998,13 @@ proc tdav::webdav_copy {} {
 		    set ret_code 412
 		} else {
 		    set ret_code 204
-		    file copy -force $entry $local_dest
+		    file copy -force -- $entry $local_dest
 		    tdav::copy_props $uri $newuri
 		}
 	    }
 	} else {
 	    set ret_code 201
-	    file copy $entry $local_dest
+	    file copy -- $entry $local_dest
 	    tdav::copy_props $uri $newuri
 	}
     }
@@ -1055,17 +1055,17 @@ proc tdav::webdav_move { args } {
 		set ret_code 412
 	    } else {
 		set ret_code 204
-		file delete -force $local_dest
-		file copy -force $entry $local_dest
-		file delete -force $entry
+		file delete -force -- $local_dest
+		file copy -force -- $entry $local_dest
+		file delete -force -- $entry
 		tdav::copy_props $uri $newuri
 		tdav::delete_props $uri
 	    }
 	} else {
 	    set ret_code 201
-	    file copy $entry $local_dest
+	    file copy -- $entry $local_dest
 	    tdav::copy_props $uri $newuri
-	    file delete -force $entry
+	    file delete -force -- $entry
 	    tdav::delete_props $uri
 	}
     }
@@ -1526,7 +1526,7 @@ Allowed web dav options are: '$allowed_options'."
     # Register filters for selected tDAV options. Do not register a
     # filter for GET, POST or HEAD.
 
-    # change /example/* to /example* to accomodate the
+    # change /example/* to /example* to accommodate the
     # url matching for registered filters
     set filter_uri "[string trimright $uri /*]*"
     foreach option $options {
@@ -1648,3 +1648,9 @@ if {![nsv_exists tdav_filters_installed filters_installed]} {
         }
     }
 }
+
+# Local variables:
+#    mode: tcl
+#    tcl-indent-level: 4
+#    indent-tabs-mode: nil
+# End:

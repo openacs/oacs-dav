@@ -2,7 +2,7 @@
 ns_log debug "\nLoading oacs-dav-procs.tcl"
 ad_library {
     
-    Support for tDAV tcl webDAV implemenation
+    Support for tDAV Tcl webDAV implemenation
     
     @author Dave Bauer (dave@thedesignexperience.org)
     @creation-date 2003-09-11
@@ -89,7 +89,7 @@ ad_proc oacs_dav::set_user_id {} {
 	    ns_returnunauthorized
 	    return 0
 	}
-        ns_log debug "\nTDAV: auth_check openacs 5.0 user_id= $auth(user_id)"
+        ns_log debug "\nTDAV: auth_check OpenACS 5.0 user_id= $auth(user_id)"
         ad_conn -set user_id $auth(user_id)
 
     } else {
@@ -343,7 +343,7 @@ ad_proc -public oacs_dav::conn_setup {} {
     # we need item_id and content_type
     # we should use content::init but that has caching and  I don't
     # have time to resolve the issues that raises right now
-    # a full-featured, consistently used tcl api for CR will fix that
+    # a full-featured, consistently used Tcl api for CR will fix that
     if {[llength $urlv] > 2} {
         set parent_url [join [lrange $urlv 0 [llength $urlv]-2] "/" ]
     } else {
@@ -389,7 +389,7 @@ ad_proc -public oacs_dav::children_have_permission_p {
     return [expr {$child_count == 0}]
 }
 
-ad_proc -public oacs_dav::handle_request { uri method args } {
+ad_proc -public oacs_dav::handle_request { args } {
     dispatch request to the proper service contract implmentation
 } {
 
@@ -448,17 +448,17 @@ ad_proc -public oacs_dav::handle_request { uri method args } {
     # content_revision if we don't find an implementation
     # implementation name is content_type
 
-       set real_content_type [oacs_dav::conn -set real_content_type $content_type]
+    set real_content_type [oacs_dav::conn -set real_content_type $content_type]
 
     while {![acs_sc_binding_exists_p dav $content_type]} {
         # go up content_type hierarchy
         # we do the query here to avoid running the query
         # when the implementation for the content_type does
         # exist
-                         set content_type [db_string supertype "select supertype from acs_object_types where object_type = :content_type" -default ""]
-                                          if { $content_type eq "content_revision"} {break}
-                                               if { $content_type eq ""} { error "no dav implementation found for content_type $real_content_type" }
-                                                    ns_log Notice "now looking for a dav implementation for content_type $content_type"
+        set content_type [db_string supertype "select supertype from acs_object_types where object_type = :content_type" -default ""]
+        if { $content_type eq "content_revision"} {break}
+        if { $content_type eq ""} { error "no dav implementation found for content_type $real_content_type" }
+        ns_log Notice "now looking for a dav implementation for content_type $content_type"
     }
 
     oacs_dav::conn -set content_type $content_type
@@ -983,7 +983,7 @@ ad_proc oacs_dav::impl::content_revision::put {} {
         set response [list 500]
         ns_log error "oacs_dav::impl::content_revision::put: $errmsg"
     }
-    file delete $tmp_filename
+    file delete -- $tmp_filename
     # at least we need to return the http_status
     return $response
 
@@ -1253,3 +1253,9 @@ ad_proc oacs_dav::impl::content_revision::unlock {} {
 
     return [list $ret_code $body]
 }
+
+# Local variables:
+#    mode: tcl
+#    tcl-indent-level: 4
+#    indent-tabs-mode: nil
+# End:

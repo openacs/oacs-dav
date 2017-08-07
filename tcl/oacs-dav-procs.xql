@@ -89,20 +89,7 @@
     </querytext>
   </fullquery>
 
-    <fullquery name="oacs_dav::children_have_permission_p.revision_perms">
-        <querytext>
-            select count(*)
-            from cr_revisions
-            where item_id = :item_id
-            and  not  exists (select 1
-                   from acs_object_party_privilege_map m
-                   where m.object_id = revision_id 
-                     and m.party_id = :user_id
-                     and m.privilege = 'delete')
-        </querytext>
-    </fullquery>
-
-    <fullquery name="oacs_dav::impl::content_folder::copy.update_child_revisions">
+  <fullquery name="oacs_dav::impl::content_folder::copy.update_child_revisions">
       <querytext>
 	update cr_items 
 	set live_revision=latest_revision
@@ -118,6 +105,6 @@
                 where item_id=child_item_id 
                       )
       </querytext>
-    </fullquery>
+  </fullquery>
 
 </queryset>
