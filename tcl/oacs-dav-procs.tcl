@@ -2,7 +2,7 @@
 ns_log debug "\nLoading oacs-dav-procs.tcl"
 ad_library {
     
-    Support for tDAV Tcl webDAV implemenation
+    Support for tDAV Tcl webDAV implementation
     
     @author Dave Bauer (dave@thedesignexperience.org)
     @creation-date 2003-09-11
@@ -379,7 +379,7 @@ ad_proc -public oacs_dav::children_have_permission_p {
     @param item_id
     @param privilege 
 
-    @return retursn 0 if user does not have privilege over all childern otherwise return 1
+    @return retursn 0 if user does not have privilege over all children otherwise return 1
 } {
     set child_count [db_string child_perms ""]
     ns_log notice "\n ----- \n oacs_dav::children_have_permission_p \n child_count = $child_count \n ----- \n"

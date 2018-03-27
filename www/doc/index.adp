@@ -28,7 +28,7 @@ the <code>dav</code> service contract. Each content type should
 implement the <code>dav</code> service contract with the
 implementation name the same as the content_type. This includes
 operations for every WebDAV method. Some operations do not make
-sense for certian object types. Specifically, content_items, which
+sense for certain object types. Specifically, content_items, which
 are mapped to WebDAV resources, should not perform a MKCOL (make
 collection) method. Likewise, a content_folder, or WebDAV
 collection, should not allow a PUT method. In addition to the
@@ -65,7 +65,7 @@ called to find the item_id for the request. If no item_id is found
 and the requested method is PUT, a new item should be created. If
 the method is not PUT, a 404 error should be returned.</p>
 <p>oacs_dav::handle_request will call the service contract
-implemenation for the content_type of the item. If the request is a
+implementation for the content_type of the item. If the request is a
 PUT, first the dav_put_type service contract for the package_key of
 the request is called. For file-storage this returns
 "file_storage_object" so items created by PUT are created
