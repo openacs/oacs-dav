@@ -26,7 +26,7 @@
         </callbacks>
         <parameters>
             <parameter datatype="number"  min_n_values="1"  max_n_values="1"  name="DefaultLockTimeout"  default="300" description="Length of time in seconds for locks if WebDAV client does not specify a time. Locks will expire after this length of time."/>
-            <parameter datatype="number"  min_n_values="1"  max_n_values="1"  name="RequireAuthForPropfind"  default="1" description="Require authorization for PROPFIND requests. Enable this to suuport Microsoft Web Folders clients which may not respond correctly to an authentication request. Set to 1 for enabled, 0 for disabled."/>
+            <parameter datatype="number"  min_n_values="1"  max_n_values="1"  name="RequireAuthForPropfind"  default="1" description="Require authorization for PROPFIND requests. Enable this to support Microsoft Web Folders clients which may not respond correctly to an authentication request. Set to 1 for enabled, 0 for disabled."/>
             <parameter datatype="string"  min_n_values="1"  max_n_values="1"  name="WebDAVURLPrefix"  default="/dav" description="Prefix to be added to the urls for WebDAV requests."/>
         </parameters>
 
