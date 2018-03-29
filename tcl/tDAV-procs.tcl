@@ -675,7 +675,7 @@ proc tdav::webdav_propfind {} {
 #     depth valid for collections (directories) can be 0 1 or infinity
 #           0 is the directory only
 #           1 is the directory and direct descendants
-#           infinity is all decendants, this is the default if depth
+#           infinity is all descendants, this is the default if depth
 #           is not specified
 #     prop_req should contain a list of name/value pairs of properties
 #           to return. Right now it is unsupported and all properties

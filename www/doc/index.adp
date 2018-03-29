@@ -11,7 +11,7 @@ handlers for WebDAV methods for objects that belong to that
 package.</p>
 <h2>Installation</h2>
 <p>Install through the APM. If you install file-storage, WebDAV
-support is installed automatically. In addtion you should check the
+support is installed automatically. In addition you should check the
 tDAV specific configuration parameters to the AOLserver
 configuration file. The default parameters work fine, they will
 create webdav URLs like <em>yoursite/</em>dav/*</p>
