@@ -751,7 +751,7 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
 } {
     set user_id [oacs_dav::conn user_id]
     set depth [oacs_dav::conn depth]
-    set encoded_uri [list]
+    set encoded_uri {}
     foreach fragment [split [ad_conn url] "/"] {
         lappend encoded_uri [oacs_dav::urlencode $fragment]
     }   
@@ -772,14 +772,14 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
     set folder_id [oacs_dav::conn item_id]
 
     # append the properties into response
-    set all_properties [list]
+    set all_properties {}
     # hack to get the OS time zone to tack on the end of oracle timestamps
     # until we stop supporting oracle 8i
     set os_time_zone [clock format [clock seconds] -format %Z]
     db_foreach get_properties "" {
         set name $name
         set etag "1f9a-400-3948d0f5"
-        set properties [list]
+        set properties {}
         # is "D" the namespace??
         lappend properties [list "D" "getcontentlength"] $content_length
 
@@ -787,7 +787,7 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
         if {$item_id == $folder_id} {
             set item_uri "/"
         } else {
-            set encoded_uri [list]
+            set encoded_uri {}
             foreach fragment [split $item_uri "/"] {
                 lappend encoded_uri [oacs_dav::urlencode $fragment]
 #               ns_log debug "\npropfind: fragment \"$fragment\" encoded_uri \"$encoded_uri\" "
@@ -1006,7 +1006,7 @@ ad_proc oacs_dav::impl::content_revision::propfind {} {
     # find the values
     db_1row get_properties ""
     set etag "1f9a-400-3948d0f5"
-    set properties [list]
+    set properties {}
     # is "D" the namespace??
     lappend properties [list "D" "getcontentlength"] $content_length
 #    lappend properties [list "D" "uri"] $item_uri
