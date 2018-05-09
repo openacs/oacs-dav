@@ -457,7 +457,7 @@ proc tdav::check_lock_for_unlock {uri} {
 
 proc tdav::get_fs_props {} {
 #    global fs_props
-    set fs_props {}
+    set fs_props [list]
 
     #    lappend fs_props [list ns0 supportlock] {subst {"<none/>"}}
     lappend fs_props [list ns0 getcontenttype] {subst {[ns_guesstype $filename]}}
@@ -534,7 +534,7 @@ proc tdav::filter_webdav_proppatch {args} {
 
     set setl [$xd getElementsByTagName "*set"]
     set rml [$xd getElementsByTagName "*remove"]
-    set prop_req {}
+    set prop_req [list]
     foreach node $rml {
         set p [[$node childNodes] childNodes]
         # we use localname because we always resolve the URI namespace
@@ -627,7 +627,7 @@ proc tdav::webdav_proppatch {} {
 #     {namespace name} value.
 
 proc tdav::webdav_propfind {} {
-    set props {}
+    set props [list]
     set uri [ns_conn url]
     set depth [tdav::conn depth]
     set prop_req [tdav::conn prop_req]
@@ -691,7 +691,7 @@ proc tdav::get_user_props { uri depth prop_req } {
 
 proc tdav::update_user_props {uri prop_req} {
     array set props [tdav::dbm_read_list $uri]
-    set status {}
+    set status [list]
     foreach {action i} $prop_req {
         lassign $i k value
         switch -- $action {
@@ -736,7 +736,7 @@ proc tdav::update_user_props {uri prop_req} {
 #     prop_req is a list of lists of namespace/name pairs
 
 proc tdav::filter_webdav_propfind {args} {
-    set prop_req {}
+    set prop_req [list]
     set depth [ns_set iget [ns_conn headers] Depth]
     tdav::conn -set depth $depth
 
@@ -755,7 +755,7 @@ proc tdav::filter_webdav_propfind {args} {
         return filter_return
     }
 
-    set xml_prop_list {}
+    set xml_prop_list [list]
 
     if {[info exists xd] && "" ne $xd } {
         set prop [$xd getElementsByTagNameNS "DAV:" "prop"]
