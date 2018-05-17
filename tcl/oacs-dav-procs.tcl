@@ -343,7 +343,7 @@ ad_proc -public oacs_dav::conn_setup {} {
     # we need item_id and content_type
     # we should use content::init but that has caching and  I don't
     # have time to resolve the issues that raises right now
-    # a full-featured, consistently used Tcl api for CR will fix that
+    # a full-featured, consistently used Tcl API for CR will fix that
     if {[llength $urlv] > 2} {
         set parent_url [join [lrange $urlv 0 [llength $urlv]-2] "/" ]
     } else {
@@ -390,7 +390,7 @@ ad_proc -public oacs_dav::children_have_permission_p {
 }
 
 ad_proc -public oacs_dav::handle_request { args } {
-    dispatch request to the proper service contract implmentation
+    dispatch request to the proper service contract implementation
 } {
 
     set uri [oacs_dav::conn uri]

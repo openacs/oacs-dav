@@ -96,7 +96,7 @@ proc tdav::filter_webdav_options {args} {
 # get body
 
 proc tdav::xml_valid_p {xml_doc} {
-# TODO use tnc with tDOM to vaildate the xml request
+# TODO use tnc with tDOM to validate the xml request
     return 1
 
 }
@@ -1135,7 +1135,7 @@ proc tdav::webdav_lock {} {
         set depth [tdav::conn depth]
         set timeout [tdav::conn lock_timeout]
         if {$timeout eq ""} {
-        #probably make this a paramter?
+        #probably make this a parameter?
             set timeout 180
         }
         if {"" ne $existing_lock_token && [file exists [tdav::get_lock_file $uri]} {
@@ -1548,7 +1548,7 @@ proc tdav::apply_filters {{uri "/*"} {options "OPTIONS GET HEAD POST DELETE TRAC
     } else {
         ns_log notice "tDAV: Filesystem access by WebDAV disabled"
     }
-    # Store the tDAV properties in an nsv set so that the registerd
+    # Store the tDAV properties in an nsv set so that the registered
     # filters and procedures don't have to read the config file
     # anymore.
 
