@@ -49,7 +49,9 @@ aa_register_case oacs_dav_put {
 	    # we probably want to create a bunch of files in the filesystem
 	    # and test mime type and other attributes to make sure the
 	    # content gets in the database
-	    set fd [open [oacs_dav::conn tmpfile] r]
+            set tmpfile [oacs_dav::conn tmpfile]
+            set tmpfilesize [file size $tmpfile]
+	    set fd [open $tmpfile r]
 	    set orig_content [read $fd]
 	    close $fd
 	    set folder_id [db_exec_plsql create_test_folder ""]
@@ -58,6 +60,11 @@ aa_register_case oacs_dav_put {
 	    db_exec_plsql register_content_type ""
 	    oacs_dav::register_folder $folder_id $sn(node_id)
 	    set response [oacs_dav::impl::content_revision::put]
+            ## Rewrite the file, as put operation would destroy it
+	    set fd [open $tmpfile w]
+	    puts -nonewline $fd $orig_content
+	    close $fd
+            ##
 	    aa_log "Response was $response"
 	    set new_item_id [db_string item_exists "" -default ""]
 	    aa_log "Item_id=$new_item_id"
@@ -65,7 +72,7 @@ aa_register_case oacs_dav_put {
 	    set revision_id [db_string revision_exists "" -default ""]	    
 	    aa_true "Content Revision Created"  [expr {$revision_id ne ""}] 
 	    set cr_filename "[cr_fs_path]/[db_string get_content_filename ""]"
-	    aa_true "Content Attribute Set" [string equal [file size [oacs_dav::conn tmpfile]] [file size $cr_filename]]
+	    aa_true "Content Attribute Set" {$tmpfilesize == [file size $cr_filename]}
 	    
 	}
 
