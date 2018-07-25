@@ -887,7 +887,6 @@ namespace eval oacs_dav::impl::content_revision {}
 ad_proc oacs_dav::impl::content_revision::get {} {
     GET DAV method for generic content revision
     @author Dave Bauer
-    @param uri
 } {
 
     set item_id [oacs_dav::conn item_id]
@@ -902,7 +901,6 @@ ad_proc oacs_dav::impl::content_revision::get {} {
 ad_proc oacs_dav::impl::content_revision::head {} {
     GET DAV method for generic content revision
     @author Dave Bauer
-    @param uri
 } {
 
     set item_id [oacs_dav::conn item_id]
