@@ -379,7 +379,7 @@ ad_proc -public oacs_dav::children_have_permission_p {
     @param item_id
     @param privilege
 
-    @return retursn 0 if user does not have privilege over all children otherwise return 1
+    @return returns 0 if user does not have privilege over all children otherwise return 1
 } {
     set child_count [db_string child_perms ""]
     ns_log notice "\n ----- \n oacs_dav::children_have_permission_p \n child_count = $child_count \n ----- \n"
