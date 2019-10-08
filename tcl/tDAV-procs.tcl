@@ -1182,13 +1182,14 @@ proc tdav::webdav_unlock {} {
 }
 
 proc tdav::filter_stuff_nsperm {args} {
-# should be something like "Basic 29234k3j49a"
-    set a [ns_set get [ns_conn headers] Authorization]
-    # get the second bit, the base64 encoded bit
-    set up [lindex [split $a " "] 1]
-    # after decoding, it should be user:password; get the username
-    set user [lindex [split [ns_uudecode $up] ":"] 0]
-
+    # should be something like "Basic 29234k3j49a"
+    set authorization [ns_set iget [ns_conn headers] Authorization]
+    if {[string length $authorization] > 0} {
+        set user [dict get $credentials user]
+        #
+        # GN: this is unfinished (but now fixed) code....
+        #
+    }
     return filter_ok
 }
 

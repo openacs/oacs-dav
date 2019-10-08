@@ -1,5 +1,3 @@
-# /packages/oacs-dav/tcl/oacs-dav-procs.tcl
-ns_log debug "\nLoading oacs-dav-procs.tcl"
 ad_library {
 
     Support for tDAV Tcl webDAV implementation
@@ -11,29 +9,6 @@ ad_library {
 }
 
 namespace eval oacs_dav {}
-
-ad_proc oacs_dav::urlencode { string } {
-    urlencode allowing characters according to rfc 1738
-    http://www.w3.org/Addressing/rfc1738.txt
-
-    "Thus, only alphanumerics, the special characters "$-_.+!*'(),", and
-    reserved characters used for their reserved purposes may be used
-    unencoded within a URL."
-
-    ignore + used to encode spaces in query strings
-
-    This is mainly to support MS Web Folders which do not follow the
-    spec which states that any character may be urlencoded. Web Folders
-    rejects the entire collection as invalid if a filename contains
-    one of these characters encoded.
-
-} {
-    set encoded_string [ns_urlencode $string]
-    set encoded_string [string map -nocase \
-                            {+ %20 %2d - %5f _ %24 $ %2e . %21 ! %28 ( %29 ) %27 ' %2c ,} $encoded_string]
-
-   return $encoded_string
-}
 
 ad_proc oacs_dav::folder_enabled {
     -folder_id
@@ -50,34 +25,29 @@ ad_proc oacs_dav::folder_enabled {
 ad_proc oacs_dav::set_user_id {} {
     set user_id based on authentication header
 } {
-
-    # should be something like "Basic 29234k3j49a"
-    set a [ns_set get [ns_conn headers] Authorization]
-    if {[string length $a]} {
-        ns_log debug "\nTDAV auth_check authentication info $a"
-        # get the second bit, the base64 encoded bit
-        set up [lindex [split $a " "] 1]
-        # after decoding, it should be user:password; get the username
-        set user [lindex [split [ns_uudecode $up] ":"] 0]
-        set password [lindex [split [ns_uudecode $up] ":"] 1]
-        ns_log debug "\nACS VERSION [ad_acs_version]"
-
-
+    #
+    # Get Authorization header.
+    #
+    set authorization [ns_set iget [ns_conn headers] Authorization]
+    if {[string length $authorization]} {
+        set credentials [http_auth::basic_authentication_decode $authorization]
         ns_log debug "\nTDAV 5.0 authentication"
+        #
         # check all authorities
+        #
         foreach authority [auth::authority::get_authority_options] {
             set authority_id [lindex $authority 1]
             array set auth [auth::authenticate \
-                -username $user \
-                -password $password \
-                -authority_id $authority_id \
-                -no_cookie]
+                                -username [dict get $credentials user] \
+                                -password [dict get $credentials password] \
+                                -authority_id $authority_id \
+                                -no_cookie]
             if {$auth(auth_status) ne "ok" } {
                 array set auth [auth::authenticate \
-                    -email $user \
-                    -password $password \
-                    -authority_id $authority_id \
-                    -no_cookie]
+                                    -email [dict get $credentials user] \
+                                    -password [dict get $credentials password] \
+                                    -authority_id $authority_id \
+                                    -no_cookie]
             }
             if {$auth(auth_status) eq "ok"} {
             # we can stop checking
@@ -753,7 +723,7 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
     set depth [oacs_dav::conn depth]
     set encoded_uri [list]
     foreach fragment [split [ad_conn url] "/"] {
-        lappend encoded_uri [oacs_dav::urlencode $fragment]
+        lappend encoded_uri [ns_urlencode $fragment]
     }
 
     set folder_uri "[ad_conn location][join $encoded_uri "/"]"
@@ -789,7 +759,7 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
         } else {
             set encoded_uri [list]
             foreach fragment [split $item_uri "/"] {
-                lappend encoded_uri [oacs_dav::urlencode $fragment]
+                lappend encoded_uri [ns_urlencode $fragment]
 #               ns_log debug "\npropfind: fragment \"$fragment\" encoded_uri \"$encoded_uri\" "
             }
             set item_uri "/[join $encoded_uri "/"]"
@@ -1085,7 +1055,7 @@ ad_proc oacs_dav::impl::content_revision::copy {} {
         return [list 409]
     }
     set dest_item_id [db_string get_dest_id "" -default ""]
-ns_log debug "\nDAV Revision Copy dest $target_uri parent_id $new_parent_folder_id"
+    ns_log debug "\nDAV Revision Copy dest $target_uri parent_id $new_parent_folder_id"
     if {$dest_item_id ne ""} {
         ns_log debug "\n ----- \n DAV Revision Copy Folder Exists item_id $dest_item_id overwrite $overwrite \n ----- \n"
         if {![string equal -nocase $overwrite "T"]} {
