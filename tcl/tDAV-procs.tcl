@@ -1184,7 +1184,7 @@ proc tdav::webdav_unlock {} {
 proc tdav::filter_stuff_nsperm {args} {
     # should be something like "Basic 29234k3j49a"
     set authorization [ns_set iget [ns_conn headers] Authorization]
-    if {[string length $authorization] > 0} {
+    if {$authorization ne ""} {
         set user [dict get $credentials user]
         #
         # GN: this is unfinished (but now fixed) code....

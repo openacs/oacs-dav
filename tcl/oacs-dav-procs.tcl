@@ -396,7 +396,7 @@ ad_proc -public oacs_dav::handle_request { args } {
 
                 }
                 lock {
-                    # asssume resource on NULL LOCK
+                    # assume resource on NULL LOCK
                     set content_type "content_revision"
                 }
                 default {
