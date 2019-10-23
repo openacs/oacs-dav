@@ -362,7 +362,7 @@ proc tdav::lock_timeout_left { timeout locktime } {
 # Results:
 #     If the lock token in the Lock-Token header matches
 #     an existing lock return "unlocked". Processing of
-#     transction from the caller should continure. If
+#     transaction from the caller should continue. If
 #     the lock doesn't match return "filter_return". Generally
 #     this means either no Lock-Token header was provided or
 #     the Lock-Token header does not match the existing lock
