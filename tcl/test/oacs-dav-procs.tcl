@@ -32,6 +32,10 @@ aa_register_case -procs {
     oacs_dav::conn
     oacs_dav::register_folder
     oacs_dav::impl::content_revision::put
+    acs_root_dir
+    cr_fs_path
+    site_node::get
+    cr_import_content
 } oacs_dav_put {
     Test generic cr_revision PUT
 } {
@@ -83,6 +87,7 @@ aa_register_case -procs {
     oacs_dav::conn
     oacs_dav::register_folder
     oacs_dav::impl::content_folder::mkcol
+    site_node::get
 } oacs_dav_mkcol {
     Test generic content folder creation
 } {
