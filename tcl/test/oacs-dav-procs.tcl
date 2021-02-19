@@ -29,8 +29,12 @@ aa_register_case oacs_dav_sc_create {
 	}
 }
 
-aa_register_case oacs_dav_put {
-    test generic cr_revision PUT
+aa_register_case -procs {
+    oacs_dav::conn
+    oacs_dav::register_folder
+    oacs_dav::impl::content_revision::put
+} oacs_dav_put {
+    Test generic cr_revision PUT
 } {
     aa_run_with_teardown \
 	-rollback \
@@ -78,8 +82,12 @@ aa_register_case oacs_dav_put {
 
 }
 
-aa_register_case oacs_dav_mkcol {
-    test generic content folder creation
+aa_register_case -procs {
+    oacs_dav::conn
+    oacs_dav::register_folder
+    oacs_dav::impl::content_folder::mkcol
+} oacs_dav_mkcol {
+    Test generic content folder creation
 } {
     aa_run_with_teardown \
 	-rollback \
