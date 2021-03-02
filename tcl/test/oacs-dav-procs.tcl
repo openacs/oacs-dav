@@ -33,8 +33,8 @@ aa_register_case -procs {
     oacs_dav::register_folder
     oacs_dav::impl::content_revision::put
     acs_root_dir
-    cr_fs_path
     site_node::get
+    content::revision::get_cr_file_path
     cr_import_content
 } oacs_dav_put {
     Test generic cr_revision PUT
@@ -77,7 +77,7 @@ aa_register_case -procs {
         aa_true "Content Item Created" {$new_item_id ne ""}
         set revision_id [db_string revision_exists "" -default ""]
         aa_true "Content Revision Created"  {$revision_id ne ""}
-        set cr_filename "[cr_fs_path]/[db_string get_content_filename ""]"
+        set cr_filename [content::revision::get_cr_file_path -revision_id $revision_id]
         aa_true "Content Attribute Set" \
             {$tmpfilesize == [file size $cr_filename]}
     }

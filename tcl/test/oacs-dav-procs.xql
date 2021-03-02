@@ -46,12 +46,6 @@
     </querytext>
   </fullquery>
 
-  <fullquery name="_oacs-dav__oacs_dav_put.get_content_filename">
-    <querytext>
-      select content from cr_revisions where revision_id=:revision_id
-    </querytext>
-  </fullquery>
-
   <fullquery name="_oacs-dav__oacs_dav_put.item_exists">
     <querytext>
       select item_id from cr_items where name=:name
