@@ -409,9 +409,11 @@ ad_proc -public oacs_dav::handle_request { args } {
 
     } else {
         # get content type of existing item
-        set content_type \
-            [oacs_dav::conn -set content_type \
-                 [db_string get_content_type "" -default "content_revision"]]
+        set content_type [content::item::get_content_type -item_id $item_id]
+        if {$content_type eq ""} {
+            set content_type "content_revision"
+        }
+        set content_type [oacs_dav::conn -set content_type $content_type]
     }
     # use content type
     # i think we should walk up the object type hierarchy up to
