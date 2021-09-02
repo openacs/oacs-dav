@@ -17,8 +17,8 @@
         <description format="text/html">An interface to the tDAV webDAV package. oacs-dav provides services to offer webDAV access to content repository data.</description>
 
         <provides url="oacs-dav" version="1.2.0d4"/>
-	<requires url="acs-kernel" version="5.10.0d1"/>
-	<requires url="acs-tcl" version="5.10.0d28"/>
+	<requires url="acs-kernel" version="5.10.0b1"/>
+	<requires url="acs-tcl" version="5.10.0b1"/>
 
         <callbacks>
             <callback type="after-install"  proc="oacs_dav::install::package_install"/>
