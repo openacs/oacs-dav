@@ -1,5 +1,5 @@
 
-<property name="context">{/doc/oacs-dav {webDAV Support}} {OpenACS WebDAV Support}</property>
+<property name="context">{/doc/oacs-dav/ {webDAV Support}} {OpenACS WebDAV Support}</property>
 <property name="doc(title)">OpenACS WebDAV Support</property>
 <master>
 <h1>OpenACS WebDAV Support</h1>
