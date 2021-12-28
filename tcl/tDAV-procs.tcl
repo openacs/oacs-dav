@@ -1637,8 +1637,8 @@ if {![nsv_exists tdav_filters_installed filters_installed]} {
 
     set tdav_shares [ns_configsection "ns/server/[ns_info server]/tdav/shares"]
     if { "" ne $tdav_shares } {
-        for {set i 0} {$i < [ns_set size $tdav_shares]} {incr i} {
-            set tdav_share [ns_configsection "ns/server/[ns_info server]/tdav/share/[ns_set key $tdav_shares $i]"]
+        foreach s [ns_set keys $tdav_shares] {
+            set tdav_share [ns_configsection "ns/server/[ns_info server]/tdav/share/$s"]
             tdav::apply_filters [ns_set get $tdav_share uri] [ns_set get $tdav_share options] [ns_set get $tdav_share enablefilesystem]
             # uncomment the next line if you are using ns_perm authentication
             # tdav::allow_group [ns_set get $tdav_share uri] tdav
