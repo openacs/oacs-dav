@@ -477,7 +477,7 @@ namespace eval oacs_dav::impl::content_folder {}
 # this is probably going away, is there such thing as "source"
 # of a folder/collection?
 
-ad_proc oacs_dav::impl::content_folder::get {} {
+ad_proc -private oacs_dav::impl::content_folder::get {} {
     GET DAV method for content folders
     can't get a folder
 } {
@@ -499,7 +499,7 @@ ad_proc oacs_dav::impl::content_folder::head {} {
     return [list 409]
 }
 
-ad_proc oacs_dav::impl::content_folder::mkcol {} {
+ad_proc -private oacs_dav::impl::content_folder::mkcol {} {
     MKCOL DAV method for generic content folder
     @author Dave Bauer
 } {
@@ -533,7 +533,7 @@ ad_proc oacs_dav::impl::content_folder::mkcol {} {
     return $response
 }
 
-ad_proc oacs_dav::impl::content_folder::copy {} {
+ad_proc -private oacs_dav::impl::content_folder::copy {} {
     COPY DAV method for generic content folder
 } {
     set package_id [oacs_dav::conn package_id]
@@ -600,7 +600,7 @@ ad_proc oacs_dav::impl::content_folder::copy {} {
     return $response
 }
 
-ad_proc oacs_dav::impl::content_folder::move {} {
+ad_proc -private oacs_dav::impl::content_folder::move {} {
     MOVE DAV method for generic content folder
 } {
     set package_id [oacs_dav::conn package_id]
@@ -689,7 +689,7 @@ ad_proc oacs_dav::impl::content_folder::move {} {
     return $response
 }
 
-ad_proc oacs_dav::impl::content_folder::delete {} {
+ad_proc -private oacs_dav::impl::content_folder::delete {} {
     DELETE DAV method for generic content folder
 } {
     set package_id [oacs_dav::conn package_id]
@@ -718,7 +718,7 @@ ad_proc oacs_dav::impl::content_folder::delete {} {
     return $response
 }
 
-ad_proc oacs_dav::impl::content_folder::propfind {} {
+ad_proc -private oacs_dav::impl::content_folder::propfind {} {
     PROPFIND DAV method for generic content folder
 } {
     set user_id [oacs_dav::conn user_id]
@@ -795,7 +795,7 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
 
 }
 
-ad_proc oacs_dav::impl::content_folder::proppatch {} {
+ad_proc -private oacs_dav::impl::content_folder::proppatch {} {
     PROPPATCH DAV method for generic content folder
     user-properties are stored in the filesystem by tDAV
     this doesn't do anything until tDAV allows storage of
@@ -811,7 +811,11 @@ ad_proc oacs_dav::impl::content_folder::proppatch {} {
     return [list 207 $response]
 }
 
-ad_proc oacs_dav::impl::content_folder::lock {} {
+ad_proc -private oacs_dav::impl::content_folder::put {} {
+    # Just a noop ti implement the full service contract
+}
+
+ad_proc -private oacs_dav::impl::content_folder::lock {} {
     LOCK DAV method for generic content folder
 } {
     set uri [oacs_dav::conn uri]
@@ -836,7 +840,7 @@ ad_proc oacs_dav::impl::content_folder::lock {} {
     return $response
 }
 
-ad_proc oacs_dav::impl::content_folder::unlock {} {
+ad_proc -private oacs_dav::impl::content_folder::unlock {} {
     UNLOCK DAV method for generic content folder
 } {
     set uri [oacs_dav::conn uri]
@@ -856,7 +860,7 @@ ad_proc oacs_dav::impl::content_folder::unlock {} {
 
 namespace eval oacs_dav::impl::content_revision {}
 
-ad_proc oacs_dav::impl::content_revision::get {} {
+ad_proc -private oacs_dav::impl::content_revision::get {} {
     GET DAV method for generic content revision
     @author Dave Bauer
 } {
@@ -870,7 +874,7 @@ ad_proc oacs_dav::impl::content_revision::get {} {
 
 }
 
-ad_proc oacs_dav::impl::content_revision::head {} {
+ad_proc -private oacs_dav::impl::content_revision::head {} {
     GET DAV method for generic content revision
     @author Dave Bauer
 } {
@@ -884,7 +888,7 @@ ad_proc oacs_dav::impl::content_revision::head {} {
     cr_write_content -item_id $item_id
 }
 
-ad_proc oacs_dav::impl::content_revision::put {} {
+ad_proc -private oacs_dav::impl::content_revision::put {} {
     PUT DAV method for generic content revision
     @author Dave Bauer
 } {
@@ -959,7 +963,7 @@ ad_proc oacs_dav::impl::content_revision::put {} {
 
 }
 
-ad_proc oacs_dav::impl::content_revision::propfind {} {
+ad_proc -private oacs_dav::impl::content_revision::propfind {} {
     PROPFIND DAV method for generic content revision
     @author Dave Bauer
 } {
@@ -996,7 +1000,7 @@ ad_proc oacs_dav::impl::content_revision::propfind {} {
     return $response
 }
 
-ad_proc oacs_dav::impl::content_revision::proppatch {} {
+ad_proc -private oacs_dav::impl::content_revision::proppatch {} {
     PROPPATCH DAV method for generic content revision
     We store all user properties in the filesystem using tDAV for now
     So this is just a stub until we can get everything stored in the
@@ -1016,7 +1020,7 @@ ad_proc oacs_dav::impl::content_revision::proppatch {} {
     return [list 207 $response]
 }
 
-ad_proc oacs_dav::impl::content_revision::delete {} {
+ad_proc -private oacs_dav::impl::content_revision::delete {} {
     DELETE DAV method for generic content revision
     @author Dave Bauer
 } {
@@ -1038,7 +1042,7 @@ ad_proc oacs_dav::impl::content_revision::delete {} {
     return $response
 }
 
-ad_proc oacs_dav::impl::content_revision::copy {} {
+ad_proc -private oacs_dav::impl::content_revision::copy {} {
     COPY DAV method for generic content revision
     @author Dave Bauer
 } {
@@ -1098,7 +1102,7 @@ ad_proc oacs_dav::impl::content_revision::copy {} {
     return $response
 }
 
-ad_proc oacs_dav::impl::content_revision::move {} {
+ad_proc -private oacs_dav::impl::content_revision::move {} {
     MOVE DAV method for generic content revision
     @author Dave Bauer
 } {
@@ -1171,7 +1175,7 @@ ns_log debug "\nDAV Revision move dest $target_uri parent_id $new_parent_folder_
 }
 
 
-ad_proc oacs_dav::impl::content_revision::mkcol {} {
+ad_proc -private oacs_dav::impl::content_revision::mkcol {} {
     MKCOL DAV method for generic content revision
     @author Dave Bauer
 } {
@@ -1181,7 +1185,7 @@ ad_proc oacs_dav::impl::content_revision::mkcol {} {
     return $response
 }
 
-ad_proc oacs_dav::impl::content_revision::lock {} {
+ad_proc -private oacs_dav::impl::content_revision::lock {} {
     LOCK DAV method for generic content revision
 } {
     set uri [oacs_dav::conn uri]
@@ -1206,7 +1210,7 @@ ad_proc oacs_dav::impl::content_revision::lock {} {
     return $response
 }
 
-ad_proc oacs_dav::impl::content_revision::unlock {} {
+ad_proc -private oacs_dav::impl::content_revision::unlock {} {
     UNLOCK DAV method for generic content revision
 } {
     set uri [oacs_dav::conn uri]
