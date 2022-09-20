@@ -5,33 +5,6 @@
 <!-- @cvs-id $Id$ -->
 <queryset>
 
-  <fullquery name="_oacs-dav__oacs_dav_sc_create.get_dav_sc">
-    <querytext>
-      select * from acs_sc_contracts where contract_name='dav'
-    </querytext>
-  </fullquery>
-
-  <fullquery name="_oacs-dav__oacs_dav_sc_create.get_dav_pt_sc">
-    <querytext>
-      select * from acs_sc_contracts where contract_name='dav_put_type'
-    </querytext>
-  </fullquery>
-
-  
-  <fullquery name="_oacs-dav__oacs_dav_sc_create.get_dav_ops">
-    <querytext>
-      select operation_name from acs_sc_operations where contract_name='dav'
-    </querytext>
-  </fullquery>
-
-  <fullquery name="_oacs-dav__oacs_dav_sc_create.get_dav_pt_op">
-    <querytext>
-      select operation_name from acs_sc_operations where
-      contract_name='dav_put_type'
-      and operation_name='get_type'
-    </querytext>
-  </fullquery>
-  
   <fullquery name="_oacs-dav__oacs_dav_put.item_exists">
     <querytext>
       select item_id from cr_items where name=:name

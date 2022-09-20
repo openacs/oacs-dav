@@ -11,21 +11,29 @@ ad_library {
 aa_register_case oacs_dav_sc_create {
     Test creation of DAV service contract
 } {
-    aa_run_with_teardown -rollback -test_code {
-
-        aa_true "DAV Service contract created" [expr [db_0or1row get_dav_sc ""]]
-        set sc_ops [db_list get_dav_ops ""]
-        set valid_ops [list get put mkcol copy propfind proppatch move delete]
-        foreach op_name $valid_ops {
-            aa_true "$op_name operation created" \
-                {[lsearch $sc_ops $op_name] > -1}
-        }
-
-        aa_true "DAV put_type Service contract created" \
-            [expr [db_0or1row get_dav_pt_sc ""]]
-        aa_true "get_type operation created" \
-            [expr [db_0or1row get_dav_pt_op ""]]
+    aa_true "DAV Service contract created" [db_0or1row get_dav_sc {
+        select * from acs_sc_contracts where contract_name='dav'
+    }]
+    set sc_ops [db_list get_dav_ops {
+        select operation_name from acs_sc_operations where contract_name='dav'
+    }]
+    set valid_ops [list get put mkcol copy propfind proppatch move delete]
+    foreach op_name $valid_ops {
+        aa_true "$op_name operation created" \
+            {$op_name in $sc_ops}
     }
+
+    aa_true "DAV put_type Service contract created" \
+        [db_0or1row get_dav_pt_sc {
+            select * from acs_sc_contracts where contract_name='dav_put_type'
+        }]
+    aa_true "get_type operation created" \
+        [db_0or1row get_dav_pt_op {
+            select operation_name from acs_sc_operations where
+            contract_name='dav_put_type'
+            and operation_name='get_type'
+
+        }]
 }
 
 aa_register_case -procs {
