@@ -126,6 +126,113 @@ aa_register_case -procs {
     }
 }
 
+aa_register_case -procs {
+    oacs_dav::children_have_permission_p
+} oacs_dav_children_have_permission_p {
+    Test the api that checks whether one has permissions on all
+    children.
+} {
+    aa_run_with_teardown -rollback -test_code {
+        set user [acs::test::user::create]
+        set user_id [dict get $user user_id]
+
+        set admin [acs::test::user::create -admin]
+        set admin_id [dict get $admin user_id]
+
+        aa_section {Create a folder containing a cr_item with a few revisions}
+
+        set root_folder_id [db_string get_root_folder {
+            select min(item_id) from cr_items
+            where content_type = 'content_folder'
+            and parent_id <= 0
+        }]
+
+        set name __OACS_DAV_TEST_FOLDER
+        set folder_id [content::folder::new \
+                                 -label $name \
+                                 -name $name]
+
+        content::folder::register_content_type \
+            -folder_id $folder_id \
+            -content_type "content_revision"
+
+        set item_id [content::item::new \
+                               -name "test_item_one" \
+                               -parent_id $folder_id \
+                               -storage_type "text"]
+
+        set title "Test Title"
+        set revision_id [content::revision::new \
+                             -item_id $item_id \
+                             -title $title \
+                             -description "Test Description" \
+                             -content "Test Content"]
+
+        set title "Test Title2"
+        set revision_id [content::revision::new \
+                             -item_id $item_id \
+                             -title $title \
+                             -description "Test Description2" \
+                             -content "Test Content2"]
+
+        foreach priv {read write delete admin} {
+            aa_false "User does not have permission to '$priv' on the folder" \
+                [oacs_dav::children_have_permission_p \
+                     -user_id $user_id -item_id $folder_id -privilege $priv]
+            aa_true "Admin has permission to '$priv' on the folder" \
+                [oacs_dav::children_have_permission_p \
+                     -user_id $admin_id -item_id $folder_id -privilege $priv]
+        }
+
+        aa_section "Set cr_item to not inherit permissions from the folder"
+        db_dml query {update acs_objects set security_inherit_p = 'f' where object_id = :item_id}
+
+        aa_log "Grant read permission on the folder"
+        permission::grant -party_id $user_id -object_id $folder_id -privilege read
+
+        aa_false "User does still not have permission to 'read' on the folder (no permissions on item)" \
+            [oacs_dav::children_have_permission_p \
+                 -user_id $user_id -item_id $folder_id -privilege read]
+
+        aa_log "Grant read permission on the item"
+        permission::grant -party_id $user_id -object_id $item_id -privilege read
+
+        aa_false "User still does not have permission 'read' on the item (no delete permission on the revisions)" \
+            [oacs_dav::children_have_permission_p \
+                 -user_id $user_id -item_id $item_id -privilege read]
+
+        aa_log "Grant delete permission on the item"
+        permission::grant -party_id $user_id -object_id $item_id -privilege delete
+        aa_true "User has now permission 'read' on the item (revision inherit from item)" \
+            [oacs_dav::children_have_permission_p \
+                 -user_id $user_id -item_id $item_id -privilege read]
+
+        aa_log "Grant delete permission singularly to the revisions"
+        foreach revision_id [db_list q {select revision_id from cr_revisions where item_id = :item_id}] {
+            permission::grant -party_id $user_id -object_id $revision_id -privilege delete
+        }
+
+        aa_true "User now havs permission 'read' on the item" \
+            [oacs_dav::children_have_permission_p \
+                 -user_id $user_id -item_id $item_id -privilege read]
+
+        aa_section "Set cr_item to inherit permissions from the folder"
+        db_dml query {update acs_objects set security_inherit_p = 't' where object_id = :item_id}
+
+        aa_true "User now has permission 'read' on the folder" \
+            [oacs_dav::children_have_permission_p \
+                 -user_id $user_id -item_id $folder_id -privilege read]
+
+        aa_log "Revoke read permission on the item"
+        permission::revoke -party_id $user_id -object_id $item_id -privilege read
+
+        aa_true "User still has permission 'read' on the folder" \
+            [oacs_dav::children_have_permission_p \
+                 -user_id $user_id -item_id $folder_id -privilege read]
+    }
+}
+
+
 # Local variables:
 #    mode: tcl
 #    tcl-indent-level: 4
