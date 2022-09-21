@@ -168,7 +168,7 @@ ad_proc oacs_dav::authorize { args } {
                                   -privilege "read"]
         }
     }
-    if {$authorized_p ne "1" } {
+    if { !$authorized_p } {
         ns_returnunauthorized
         return filter_return
     }
