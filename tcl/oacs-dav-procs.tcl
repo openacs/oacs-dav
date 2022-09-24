@@ -304,7 +304,6 @@ ad_proc -public oacs_dav::conn_setup {} {
     set urlv [oacs_dav::conn -set urlv [split [string trimright $uri "/"] "/"]]
 
     set destination [ns_urldecode [ns_set iget [ns_conn headers] Destination]]
-    ns_log warning DESTINATION=$destination
 
     regsub {https?://[^/]+/} $destination {/} dest
 
