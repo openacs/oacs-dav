@@ -136,16 +136,21 @@ ad_proc oacs_dav::authorize { args } {
         }
         copy -
         move {
+            set dest_parent_id [oacs_dav::conn dest_parent_id]
+            if {$dest_parent_id eq ""} {
+                ns_return 409 text/plain {Non-existant destination}
+                return filter_ok
+            }
             set authorized_p [expr [permission::permission_p \
                                         -object_id $item_id \
                                         -party_id $user_id \
                                         -privilege "read"] \
                                 && [permission::permission_p \
-                                        -object_id [oacs_dav::conn dest_parent_id ] \
+                                        -object_id $dest_parent_id \
                                         -party_id $user_id \
                                         -privilege "create"]\
                                 || [permission::permission_p \
-                                        -object_id [oacs_dav::conn dest_parent_id ] \
+                                        -object_id $dest_parent_id \
                                         -party_id $user_id \
                                         -privilege "write"]]
         }
@@ -299,6 +304,7 @@ ad_proc -public oacs_dav::conn_setup {} {
     set urlv [oacs_dav::conn -set urlv [split [string trimright $uri "/"] "/"]]
 
     set destination [ns_urldecode [ns_set iget [ns_conn headers] Destination]]
+    ns_log warning DESTINATION=$destination
 
     regsub {https?://[^/]+/} $destination {/} dest
 
@@ -1054,7 +1060,7 @@ ad_proc -private oacs_dav::impl::content_revision::copy {} {
     set target_uri [oacs_dav::conn oacs_destination]
     set copy_item_id [oacs_dav::conn item_id]
     set overwrite [oacs_dav::conn overwrite]
-    set turlv [split $target_uri "/"]
+    set turlv [split [string trimright $target_uri "/"] "/"]
     set new_name [lindex $turlv end]
     set new_parent_folder_id [oacs_dav::conn dest_parent_id]
     if {$new_parent_folder_id eq ""} {
@@ -1116,7 +1122,7 @@ ad_proc -private oacs_dav::impl::content_revision::move {} {
     set target_uri [oacs_dav::conn oacs_destination]
     set cur_parent_folder_id [oacs_dav::conn folder_id]
     set new_parent_folder_id [oacs_dav::conn dest_parent_id]
-    set turlv [split $target_uri "/"]
+    set turlv [split [string trimright $target_uri "/"] "/"]
     set new_name [lindex $turlv end]
     set overwrite [oacs_dav::conn overwrite]
     if {$new_parent_folder_id eq ""} {
