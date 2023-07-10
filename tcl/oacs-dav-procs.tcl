@@ -138,7 +138,7 @@ ad_proc oacs_dav::authorize { args } {
         move {
             set dest_parent_id [oacs_dav::conn dest_parent_id]
             if {$dest_parent_id eq ""} {
-                ns_return 409 text/plain {Non-existant destination}
+                ns_return 409 text/plain {Non-existent destination}
                 return filter_ok
             }
             set authorized_p [expr [permission::permission_p \
