@@ -530,7 +530,7 @@ proc tdav::filter_webdav_proppatch {args} {
 
     set xml [tdav::read_xml]
 
-    if {[catch {dom parse $xml} xd]} {
+    if {[catch {dom parse -- $xml} xd]} {
     # xml body is not well formed
         ns_returnbadrequest
         return filter_return
@@ -740,7 +740,7 @@ proc tdav::filter_webdav_propfind {args} {
     regsub {^/} [ns_conn url] {} uri
     set entry [file join $::acs::pageroot $uri]
     # parse the xml body to check if its valid
-    if {"" ne $xml && [catch {dom parse $xml} xd]} {
+    if {"" ne $xml && [catch {dom parse -- $xml} xd]} {
         ns_return 400 text/plain "XML request not well-formed."
         return filter_return
     }
@@ -1067,7 +1067,7 @@ proc tdav::filter_webdav_lock {args} {
     set body {}
 
     set xml [tdav::read_xml]
-    set d [[dom parse $xml] documentElement]
+    set d [[dom parse -- $xml] documentElement]
     set l [$d childNodes]
     set scope [[[lindex $l 0] childNodes] nodeName]
     set type [[[lindex $l 1] childNodes] nodeName]
