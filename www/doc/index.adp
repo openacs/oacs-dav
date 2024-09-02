@@ -2,6 +2,10 @@
 <property name="context">{/doc/oacs-dav/ {webDAV Support}} {OpenACS WebDAV Support}</property>
 <property name="doc(title)">OpenACS WebDAV Support</property>
 <master>
+<style>
+div.sect2 > div.itemizedlist > ul.itemizedlist > li.listitem {margin-top: 16px;}
+div.sect3 > div.itemizedlist > ul.itemizedlist > li.listitem {margin-top: 6px;}
+</style>              
 <h1>OpenACS WebDAV Support</h1>
 <h2>Introduction</h2>
 <p>This package implements a WebDAV interface to the OpenACS
