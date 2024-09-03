@@ -33,12 +33,6 @@
     </querytext>
   </fullquery>
 
-  <fullquery name="oacs_dav::handle_request.get_content_type">
-    <querytext>
-      select content_type from cr_items where item_id=:item_id
-    </querytext>
-  </fullquery>
-
   <fullquery name="oacs_dav::impl::content_revision::put.set_live_revision">
     <querytext>
       update cr_items set live_revision=:revision_id

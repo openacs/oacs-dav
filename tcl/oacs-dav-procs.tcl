@@ -1,5 +1,3 @@
-# /packages/oacs-dav/tcl/oacs-dav-procs.tcl
-ns_log debug "\nLoading oacs-dav-procs.tcl"
 ad_library {
 
     Support for tDAV Tcl webDAV implementation
@@ -11,29 +9,6 @@ ad_library {
 }
 
 namespace eval oacs_dav {}
-
-ad_proc oacs_dav::urlencode { string } {
-    urlencode allowing characters according to rfc 1738
-    http://www.w3.org/Addressing/rfc1738.txt
-
-    "Thus, only alphanumerics, the special characters "$-_.+!*'(),", and
-    reserved characters used for their reserved purposes may be used
-    unencoded within a URL."
-
-    ignore + used to encode spaces in query strings
-
-    This is mainly to support MS Web Folders which do not follow the
-    spec which states that any character may be urlencoded. Web Folders
-    rejects the entire collection as invalid if a filename contains
-    one of these characters encoded.
-
-} {
-    set encoded_string [ns_urlencode $string]
-    set encoded_string [string map -nocase \
-                            {+ %20 %2d - %5f _ %24 $ %2e . %21 ! %28 ( %29 ) %27 ' %2c ,} $encoded_string]
-
-   return $encoded_string
-}
 
 ad_proc oacs_dav::folder_enabled {
     -folder_id
@@ -50,34 +25,29 @@ ad_proc oacs_dav::folder_enabled {
 ad_proc oacs_dav::set_user_id {} {
     set user_id based on authentication header
 } {
-
-    # should be something like "Basic 29234k3j49a"
-    set a [ns_set get [ns_conn headers] Authorization]
-    if {[string length $a]} {
-        ns_log debug "\nTDAV auth_check authentication info $a"
-        # get the second bit, the base64 encoded bit
-        set up [lindex [split $a " "] 1]
-        # after decoding, it should be user:password; get the username
-        set user [lindex [split [ns_uudecode $up] ":"] 0]
-        set password [lindex [split [ns_uudecode $up] ":"] 1]
-        ns_log debug "\nACS VERSION [ad_acs_version]"
-
-
+    #
+    # Get Authorization header.
+    #
+    set authorization [ns_set iget [ns_conn headers] Authorization]
+    if {[string length $authorization]} {
+        set credentials [http_auth::basic_authentication_decode $authorization]
         ns_log debug "\nTDAV 5.0 authentication"
+        #
         # check all authorities
+        #
         foreach authority [auth::authority::get_authority_options] {
             set authority_id [lindex $authority 1]
             array set auth [auth::authenticate \
-                -username $user \
-                -password $password \
-                -authority_id $authority_id \
-                -no_cookie]
+                                -username [dict get $credentials user] \
+                                -password [dict get $credentials password] \
+                                -authority_id $authority_id \
+                                -no_cookie]
             if {$auth(auth_status) ne "ok" } {
                 array set auth [auth::authenticate \
-                    -email $user \
-                    -password $password \
-                    -authority_id $authority_id \
-                    -no_cookie]
+                                    -email [dict get $credentials user] \
+                                    -password [dict get $credentials password] \
+                                    -authority_id $authority_id \
+                                    -no_cookie]
             }
             if {$auth(auth_status) eq "ok"} {
             # we can stop checking
@@ -166,16 +136,21 @@ ad_proc oacs_dav::authorize { args } {
         }
         copy -
         move {
+            set dest_parent_id [oacs_dav::conn dest_parent_id]
+            if {$dest_parent_id eq ""} {
+                ns_return 409 text/plain {Non-existent destination}
+                return filter_ok
+            }
             set authorized_p [expr [permission::permission_p \
                                         -object_id $item_id \
                                         -party_id $user_id \
                                         -privilege "read"] \
                                 && [permission::permission_p \
-                                        -object_id [oacs_dav::conn dest_parent_id ] \
+                                        -object_id $dest_parent_id \
                                         -party_id $user_id \
                                         -privilege "create"]\
                                 || [permission::permission_p \
-                                        -object_id [oacs_dav::conn dest_parent_id ] \
+                                        -object_id $dest_parent_id \
                                         -party_id $user_id \
                                         -privilege "write"]]
         }
@@ -198,7 +173,7 @@ ad_proc oacs_dav::authorize { args } {
                                   -privilege "read"]
         }
     }
-    if {$authorized_p ne "1" } {
+    if { !$authorized_p } {
         ns_returnunauthorized
         return filter_return
     }
@@ -379,7 +354,7 @@ ad_proc -public oacs_dav::children_have_permission_p {
     @param item_id
     @param privilege
 
-    @return retursn 0 if user does not have privilege over all children otherwise return 1
+    @return returns 0 if user does not have privilege over all children otherwise return 1
 } {
     set child_count [db_string child_perms ""]
     ns_log notice "\n ----- \n oacs_dav::children_have_permission_p \n child_count = $child_count \n ----- \n"
@@ -426,7 +401,7 @@ ad_proc -public oacs_dav::handle_request { args } {
 
                 }
                 lock {
-                    # asssume resource on NULL LOCK
+                    # assume resource on NULL LOCK
                     set content_type "content_revision"
                 }
                 default {
@@ -439,9 +414,11 @@ ad_proc -public oacs_dav::handle_request { args } {
 
     } else {
         # get content type of existing item
-        set content_type \
-            [oacs_dav::conn -set content_type \
-                 [db_string get_content_type "" -default "content_revision"]]
+        set content_type [content::item::get_content_type -item_id $item_id]
+        if {$content_type eq ""} {
+            set content_type "content_revision"
+        }
+        set content_type [oacs_dav::conn -set content_type $content_type]
     }
     # use content type
     # i think we should walk up the object type hierarchy up to
@@ -505,7 +482,7 @@ namespace eval oacs_dav::impl::content_folder {}
 # this is probably going away, is there such thing as "source"
 # of a folder/collection?
 
-ad_proc oacs_dav::impl::content_folder::get {} {
+ad_proc -private oacs_dav::impl::content_folder::get {} {
     GET DAV method for content folders
     can't get a folder
 } {
@@ -527,7 +504,7 @@ ad_proc oacs_dav::impl::content_folder::head {} {
     return [list 409]
 }
 
-ad_proc oacs_dav::impl::content_folder::mkcol {} {
+ad_proc -private oacs_dav::impl::content_folder::mkcol {} {
     MKCOL DAV method for generic content folder
     @author Dave Bauer
 } {
@@ -561,7 +538,7 @@ ad_proc oacs_dav::impl::content_folder::mkcol {} {
     return $response
 }
 
-ad_proc oacs_dav::impl::content_folder::copy {} {
+ad_proc -private oacs_dav::impl::content_folder::copy {} {
     COPY DAV method for generic content folder
 } {
     set package_id [oacs_dav::conn package_id]
@@ -628,7 +605,7 @@ ad_proc oacs_dav::impl::content_folder::copy {} {
     return $response
 }
 
-ad_proc oacs_dav::impl::content_folder::move {} {
+ad_proc -private oacs_dav::impl::content_folder::move {} {
     MOVE DAV method for generic content folder
 } {
     set package_id [oacs_dav::conn package_id]
@@ -717,7 +694,7 @@ ad_proc oacs_dav::impl::content_folder::move {} {
     return $response
 }
 
-ad_proc oacs_dav::impl::content_folder::delete {} {
+ad_proc -private oacs_dav::impl::content_folder::delete {} {
     DELETE DAV method for generic content folder
 } {
     set package_id [oacs_dav::conn package_id]
@@ -746,14 +723,14 @@ ad_proc oacs_dav::impl::content_folder::delete {} {
     return $response
 }
 
-ad_proc oacs_dav::impl::content_folder::propfind {} {
+ad_proc -private oacs_dav::impl::content_folder::propfind {} {
     PROPFIND DAV method for generic content folder
 } {
     set user_id [oacs_dav::conn user_id]
     set depth [oacs_dav::conn depth]
     set encoded_uri [list]
     foreach fragment [split [ad_conn url] "/"] {
-        lappend encoded_uri [oacs_dav::urlencode $fragment]
+        lappend encoded_uri [ns_urlencode $fragment]
     }
 
     set folder_uri "[ad_conn location][join $encoded_uri "/"]"
@@ -773,7 +750,7 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
 
     # append the properties into response
     set all_properties [list]
-    # hack to get the OS time zone to tack on the end of oracle timestamps
+    # hack to get the OS timezone to tack on the end of oracle timestamps
     # until we stop supporting oracle 8i
     set os_time_zone [clock format [clock seconds] -format %Z]
     db_foreach get_properties "" {
@@ -789,7 +766,7 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
         } else {
             set encoded_uri [list]
             foreach fragment [split $item_uri "/"] {
-                lappend encoded_uri [oacs_dav::urlencode $fragment]
+                lappend encoded_uri [ns_urlencode $fragment]
 #               ns_log debug "\npropfind: fragment \"$fragment\" encoded_uri \"$encoded_uri\" "
             }
             set item_uri "/[join $encoded_uri "/"]"
@@ -823,7 +800,7 @@ ad_proc oacs_dav::impl::content_folder::propfind {} {
 
 }
 
-ad_proc oacs_dav::impl::content_folder::proppatch {} {
+ad_proc -private oacs_dav::impl::content_folder::proppatch {} {
     PROPPATCH DAV method for generic content folder
     user-properties are stored in the filesystem by tDAV
     this doesn't do anything until tDAV allows storage of
@@ -839,7 +816,11 @@ ad_proc oacs_dav::impl::content_folder::proppatch {} {
     return [list 207 $response]
 }
 
-ad_proc oacs_dav::impl::content_folder::lock {} {
+ad_proc -private oacs_dav::impl::content_folder::put {} {
+    # Just a noop ti implement the full service contract
+}
+
+ad_proc -private oacs_dav::impl::content_folder::lock {} {
     LOCK DAV method for generic content folder
 } {
     set uri [oacs_dav::conn uri]
@@ -864,7 +845,7 @@ ad_proc oacs_dav::impl::content_folder::lock {} {
     return $response
 }
 
-ad_proc oacs_dav::impl::content_folder::unlock {} {
+ad_proc -private oacs_dav::impl::content_folder::unlock {} {
     UNLOCK DAV method for generic content folder
 } {
     set uri [oacs_dav::conn uri]
@@ -884,7 +865,7 @@ ad_proc oacs_dav::impl::content_folder::unlock {} {
 
 namespace eval oacs_dav::impl::content_revision {}
 
-ad_proc oacs_dav::impl::content_revision::get {} {
+ad_proc -private oacs_dav::impl::content_revision::get {} {
     GET DAV method for generic content revision
     @author Dave Bauer
 } {
@@ -898,7 +879,7 @@ ad_proc oacs_dav::impl::content_revision::get {} {
 
 }
 
-ad_proc oacs_dav::impl::content_revision::head {} {
+ad_proc -private oacs_dav::impl::content_revision::head {} {
     GET DAV method for generic content revision
     @author Dave Bauer
 } {
@@ -912,7 +893,7 @@ ad_proc oacs_dav::impl::content_revision::head {} {
     cr_write_content -item_id $item_id
 }
 
-ad_proc oacs_dav::impl::content_revision::put {} {
+ad_proc -private oacs_dav::impl::content_revision::put {} {
     PUT DAV method for generic content revision
     @author Dave Bauer
 } {
@@ -987,7 +968,7 @@ ad_proc oacs_dav::impl::content_revision::put {} {
 
 }
 
-ad_proc oacs_dav::impl::content_revision::propfind {} {
+ad_proc -private oacs_dav::impl::content_revision::propfind {} {
     PROPFIND DAV method for generic content revision
     @author Dave Bauer
 } {
@@ -1024,7 +1005,7 @@ ad_proc oacs_dav::impl::content_revision::propfind {} {
     return $response
 }
 
-ad_proc oacs_dav::impl::content_revision::proppatch {} {
+ad_proc -private oacs_dav::impl::content_revision::proppatch {} {
     PROPPATCH DAV method for generic content revision
     We store all user properties in the filesystem using tDAV for now
     So this is just a stub until we can get everything stored in the
@@ -1044,7 +1025,7 @@ ad_proc oacs_dav::impl::content_revision::proppatch {} {
     return [list 207 $response]
 }
 
-ad_proc oacs_dav::impl::content_revision::delete {} {
+ad_proc -private oacs_dav::impl::content_revision::delete {} {
     DELETE DAV method for generic content revision
     @author Dave Bauer
 } {
@@ -1066,7 +1047,7 @@ ad_proc oacs_dav::impl::content_revision::delete {} {
     return $response
 }
 
-ad_proc oacs_dav::impl::content_revision::copy {} {
+ad_proc -private oacs_dav::impl::content_revision::copy {} {
     COPY DAV method for generic content revision
     @author Dave Bauer
 } {
@@ -1078,14 +1059,14 @@ ad_proc oacs_dav::impl::content_revision::copy {} {
     set target_uri [oacs_dav::conn oacs_destination]
     set copy_item_id [oacs_dav::conn item_id]
     set overwrite [oacs_dav::conn overwrite]
-    set turlv [split $target_uri "/"]
+    set turlv [split [string trimright $target_uri "/"] "/"]
     set new_name [lindex $turlv end]
     set new_parent_folder_id [oacs_dav::conn dest_parent_id]
     if {$new_parent_folder_id eq ""} {
         return [list 409]
     }
     set dest_item_id [db_string get_dest_id "" -default ""]
-ns_log debug "\nDAV Revision Copy dest $target_uri parent_id $new_parent_folder_id"
+    ns_log debug "\nDAV Revision Copy dest $target_uri parent_id $new_parent_folder_id"
     if {$dest_item_id ne ""} {
         ns_log debug "\n ----- \n DAV Revision Copy Folder Exists item_id $dest_item_id overwrite $overwrite \n ----- \n"
         if {![string equal -nocase $overwrite "T"]} {
@@ -1126,7 +1107,7 @@ ns_log debug "\nDAV Revision Copy dest $target_uri parent_id $new_parent_folder_
     return $response
 }
 
-ad_proc oacs_dav::impl::content_revision::move {} {
+ad_proc -private oacs_dav::impl::content_revision::move {} {
     MOVE DAV method for generic content revision
     @author Dave Bauer
 } {
@@ -1140,7 +1121,7 @@ ad_proc oacs_dav::impl::content_revision::move {} {
     set target_uri [oacs_dav::conn oacs_destination]
     set cur_parent_folder_id [oacs_dav::conn folder_id]
     set new_parent_folder_id [oacs_dav::conn dest_parent_id]
-    set turlv [split $target_uri "/"]
+    set turlv [split [string trimright $target_uri "/"] "/"]
     set new_name [lindex $turlv end]
     set overwrite [oacs_dav::conn overwrite]
     if {$new_parent_folder_id eq ""} {
@@ -1199,7 +1180,7 @@ ns_log debug "\nDAV Revision move dest $target_uri parent_id $new_parent_folder_
 }
 
 
-ad_proc oacs_dav::impl::content_revision::mkcol {} {
+ad_proc -private oacs_dav::impl::content_revision::mkcol {} {
     MKCOL DAV method for generic content revision
     @author Dave Bauer
 } {
@@ -1209,7 +1190,7 @@ ad_proc oacs_dav::impl::content_revision::mkcol {} {
     return $response
 }
 
-ad_proc oacs_dav::impl::content_revision::lock {} {
+ad_proc -private oacs_dav::impl::content_revision::lock {} {
     LOCK DAV method for generic content revision
 } {
     set uri [oacs_dav::conn uri]
@@ -1234,7 +1215,7 @@ ad_proc oacs_dav::impl::content_revision::lock {} {
     return $response
 }
 
-ad_proc oacs_dav::impl::content_revision::unlock {} {
+ad_proc -private oacs_dav::impl::content_revision::unlock {} {
     UNLOCK DAV method for generic content revision
 } {
     set uri [oacs_dav::conn uri]

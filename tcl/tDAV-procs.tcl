@@ -113,18 +113,7 @@ proc tdav::xml_valid_p {xml_doc} {
 #     returns xml text of request
 
 proc tdav::read_xml {} {
-    set fp ""
-    while {$fp eq ""} {
-        set tmpfile [ad_tmpnam]
-        set fp [ns_openexcl $tmpfile]
-    }
-    #fconfigure $fp -translation binary -encoding binary
-    #    fconfigure $fp -encoding utf-8
-    ns_conncptofp $fp
-    seek $fp 0
-    set xml [read $fp]
-    close $fp
-    file delete -- $tmpfile
+    set xml [ns_getcontent -as_file false -binary false]
     ns_log debug "\n-----tdav::read_xml XML = -----\n $xml \n ----- end ----- \n "
     return $xml
 }
@@ -143,16 +132,11 @@ proc tdav::read_xml {} {
 #     file written including contents of list
 
 proc tdav::dbm_write_list {uri list} {
-    set file [tdav::get_prop_file $uri]
-    if {[catch {set f [open $file w]} err]} {
-    # probably no parent dir, create it:
-        file mkdir [file dirname $file]
-        # open again:
-        set f [open $file w]
-    }
-    fconfigure $f -encoding utf-8
-    puts $f $list
-    close $f
+    regsub {^/} $uri {} uri
+    ad_set_client_property \
+        -persistent t \
+        -session_id 0 \
+        oacs-dav $uri $list
 }
 
 # tdav::get_prop_file
@@ -229,9 +213,11 @@ regsub {^/} $uri {} uri
 #     File containing user properties for URI is deleted
 
 proc tdav::delete_props {uri} {
-    set entry [tdav::get_prop_file $uri]
-    catch {[file delete -force -- $entry]} err
-    return err
+    regsub {^/} $uri {} uri
+    ad_set_client_property \
+        -persistent t \
+        -session_id 0 \
+        oacs-dav $uri ""
 }
 
 # tdav::move_props
@@ -247,9 +233,20 @@ proc tdav::delete_props {uri} {
 #     to the relative location for newuri
 
 proc tdav::move_props {uri newuri} {
-    set entry [tdav::get_prop_file $uri]
-    set dest [tdav::get_prop_file $newuri]
-    catch {[file copy -force -- $entry $dest]}
+    regsub {^/} $uri {} uri
+    regsub {^/} $newuri {} newuri
+    set props [ad_get_client_property \
+                -session_id 0 \
+                -default "" \
+                oacs-dav $uri]
+    ad_set_client_property \
+        -persistent t \
+        -session_id 0 \
+        oacs-dav $newuri $props
+    ad_set_client_property \
+        -persistent t \
+        -session_id 0 \
+        oacs-dav $uri ""
 }
 
 # tdav::copy_props
@@ -266,9 +263,16 @@ proc tdav::move_props {uri newuri} {
 #     location corresponding to newuri.
 
 proc tdav::copy_props {uri newuri} {
-    set entry [tdav::get_prop_file $uri]
-    set dest [tdav::get_prop_file $newuri]
-    catch {[file copy -force -- $entry $dest]}
+    regsub {^/} $uri {} uri
+    regsub {^/} $newuri {} newuri
+    set props [ad_get_client_property \
+                -session_id 0 \
+                -default "" \
+                oacs-dav $uri]
+    ad_set_client_property \
+        -persistent t \
+        -session_id 0 \
+        oacs-dav $newuri $props
 }
 
 proc tdav::write_lock {uri list} {
@@ -278,11 +282,11 @@ proc tdav::write_lock {uri list} {
 }
 
 proc tdav::dbm_read_list {uri} {
-    set f [open [tdav::get_prop_file $uri] {CREAT RDONLY}]
-    fconfigure $f -encoding utf-8
-    set s [read $f]
-    close $f
-    return $s
+    regsub {^/} $uri {} uri
+    return [ad_get_client_property \
+                -session_id 0 \
+                -default "" \
+                oacs-dav $uri]
 }
 
 # tdav::read_lock
@@ -362,7 +366,7 @@ proc tdav::lock_timeout_left { timeout locktime } {
 # Results:
 #     If the lock token in the Lock-Token header matches
 #     an existing lock return "unlocked". Processing of
-#     transction from the caller should continure. If
+#     transaction from the caller should continue. If
 #     the lock doesn't match return "filter_return". Generally
 #     this means either no Lock-Token header was provided or
 #     the Lock-Token header does not match the existing lock
@@ -526,33 +530,19 @@ proc tdav::filter_webdav_proppatch {args} {
 
     set xml [tdav::read_xml]
 
-    if {[catch {dom parse $xml} xd]} {
+    if {[catch {dom parse -- $xml} xd]} {
     # xml body is not well formed
         ns_returnbadrequest
         return filter_return
     }
 
-    set setl [$xd getElementsByTagName "*set"]
-    set rml [$xd getElementsByTagName "*remove"]
-    set prop_req [list]
-    foreach node $rml {
-        set p [[$node childNodes] childNodes]
-        # we use localname because we always resolve the URI namespace
-        # for the tag name
-        set ns [$p namespaceURI]
-        if {$ns eq ""} {
-            set name [$p nodeName]
-        } else {
-            set name [$p localName]
-        }
-        if {[catch {set value [[$p childNodes] nodeValue]}]} {
-            set value ""
-        }
-        lappend prop_req remove [list [list $ns $name] $value]
-    }
+    set property_update [$xd documentElement]
 
-    foreach node $setl {
-        set p [[$node childNodes] childNodes]
+    set prop_req [list]
+
+    foreach node [$property_update childNodes] {
+        regsub {^.*:} [$node nodeName] {} operation
+        set p [[$node firstChild] firstChild]
         # we use localname because we always resolve the URI namespace
         # for the tag name
         set ns [$p namespaceURI]
@@ -564,7 +554,7 @@ proc tdav::filter_webdav_proppatch {args} {
         if {[catch {set value [[$p childNodes] nodeValue]}]} {
             set value ""
         }
-        lappend prop_req set [list [list $ns $name] $value]
+        lappend prop_req $operation [list [list $ns $name] $value]
     }
 
     tdav::conn -set prop_req $prop_req
@@ -750,7 +740,7 @@ proc tdav::filter_webdav_propfind {args} {
     regsub {^/} [ns_conn url] {} uri
     set entry [file join $::acs::pageroot $uri]
     # parse the xml body to check if its valid
-    if {"" ne $xml && [catch {dom parse $xml} xd]} {
+    if {"" ne $xml && [catch {dom parse -- $xml} xd]} {
         ns_return 400 text/plain "XML request not well-formed."
         return filter_return
     }
@@ -790,8 +780,7 @@ proc tdav::filter_webdav_propfind {args} {
 
 proc tdav::filter_webdav_put {args} {
 
-    set tmpfile [ad_tmpnam]
-    set fd [open $tmpfile w+]
+    set fd [ad_opentmpfile tmpfile]
     ns_writecontent $fd
     close $fd
 
@@ -1078,7 +1067,7 @@ proc tdav::filter_webdav_lock {args} {
     set body {}
 
     set xml [tdav::read_xml]
-    set d [[dom parse $xml] documentElement]
+    set d [[dom parse -- $xml] documentElement]
     set l [$d childNodes]
     set scope [[[lindex $l 0] childNodes] nodeName]
     set type [[[lindex $l 1] childNodes] nodeName]
@@ -1182,13 +1171,14 @@ proc tdav::webdav_unlock {} {
 }
 
 proc tdav::filter_stuff_nsperm {args} {
-# should be something like "Basic 29234k3j49a"
-    set a [ns_set get [ns_conn headers] Authorization]
-    # get the second bit, the base64 encoded bit
-    set up [lindex [split $a " "] 1]
-    # after decoding, it should be user:password; get the username
-    set user [lindex [split [ns_uudecode $up] ":"] 0]
-
+    # should be something like "Basic 29234k3j49a"
+    set authorization [ns_set iget [ns_conn headers] Authorization]
+    if {$authorization ne ""} {
+        set user [dict get $credentials user]
+        #
+        # GN: this is unfinished (but now fixed) code....
+        #
+    }
     return filter_ok
 }
 
@@ -1339,6 +1329,11 @@ proc tdav::respond::propfind { response } {
 # we don't have to check the tdav fs props or lock properties
 # they should already be there
 
+    set request_properties [list]
+    foreach pr [tdav::conn prop_req] {
+        lappend request_properties $pr ""
+    }
+
     set d [dom createDocumentNS "DAV:" "D:multistatus"]
     set n [$d documentElement]
     $n setAttribute "xmlns:b" "urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/"
@@ -1349,17 +1344,24 @@ proc tdav::respond::propfind { response } {
         $n appendChild $r
         set h [$d createElement D:href]
         $h appendChild [$d createTextNode ${href}]
-        set propstat [$d createElement D:propstat]
-        set prop [$d createElement D:prop]
         $r appendChild $h
-        $r appendChild $propstat
 
-        foreach {i j} $props {
-        # interestingly enough, adding the namespace here to the prop is fine
+        #
+        # We will return both the properties we have and the
+        # properties that were requested (as per RFC). When the
+        # requested property does not exist, 404 will be returned in
+        # the status.
+        #
+        foreach {i j} [dict merge $request_properties $props] {
+            set propstat [$d createElement D:propstat]
+            set prop [$d createElement D:prop]
+            $r appendChild $propstat
+
+            # interestingly enough, adding the namespace here to the prop is fine
             lassign $i ns name
             if {"D" ne $ns && "ns0" ne $ns } {
-            # for user properties set the namespace explicitly in
-            # the tag
+                # for user properties set the namespace explicitly in
+                # the tag
                 if {$ns ne ""} {
                     set pnode [$d createElementNS $ns $name]
                 } else {
@@ -1393,72 +1395,74 @@ proc tdav::respond::propfind { response } {
 
             $prop appendChild $pnode
 
-        }
+            set supportedlock [$d createElement D:supportedlock]
 
-        set supportedlock [$d createElement D:supportedlock]
+            set lockentry [$d createElement D:lockentry]
+            set lockscope [$d createElement D:lockscope]
+            set exclusive [$d createElement D:exclusive]
+            set locktype [$d createElement D:locktype]
+            set write_type [$d createElement D:write]
 
-        set lockentry [$d createElement D:lockentry]
-        set lockscope [$d createElement D:lockscope]
-        set exclusive [$d createElement D:exclusive]
-        set locktype [$d createElement D:locktype]
-        set write_type [$d createElement D:write]
+            $supportedlock appendChild $lockentry
 
-        $supportedlock appendChild $lockentry
+            $locktype appendChild $write_type
+            $lockscope appendChild $exclusive
 
-        $locktype appendChild $write_type
-        $lockscope appendChild $exclusive
+            $lockentry appendChild $lockscope
+            $lockentry appendChild $locktype
 
-        $lockentry appendChild $lockscope
-        $lockentry appendChild $locktype
+            $prop appendChild $supportedlock
 
-        $prop appendChild $supportedlock
+            set lockdiscovery [$d createElement D:lockdiscovery]
+            regsub {https?://[^/]+/} $href {/} local_uri
+            if {[file exists [tdav::get_lock_file $local_uri]]} {
+                # check for timeout
+                set lockinfo [tdav::read_lock $local_uri]
+                set lock_timeout_left [tdav::lock_timeout_left [lindex $lockinfo 4] [lindex $lockinfo 6]]
+                if {$lock_timeout_left > 0} {
 
-        set lockdiscovery [$d createElement D:lockdiscovery]
-        regsub {https?://[^/]+/} $href {/} local_uri
-        if {[file exists [tdav::get_lock_file $local_uri]]} {
-        # check for timeout
-            set lockinfo [tdav::read_lock $local_uri]
-            set lock_timeout_left [tdav::lock_timeout_left [lindex $lockinfo 4] [lindex $lockinfo 6]]
-            if {$lock_timeout_left > 0} {
+                    set activelock [$d createElement D:activelock]
+                    set locktype [$d createElement D:locktype]
+                    set lockscope [$d createElement D:lockscope]
+                    set depth [$d createElement D:depth]
+                    set owner [$d createElement D:owner]
+                    set timeout [$d createElement D:timeout]
+                    set locktoken [$d createElement D:locktoken]
+                    set locktokenhref [$d createElement D:href]
 
-                set activelock [$d createElement D:activelock]
-                set locktype [$d createElement D:locktype]
-                set lockscope [$d createElement D:lockscope]
-                set depth [$d createElement D:depth]
-                set owner [$d createElement D:owner]
-                set timeout [$d createElement D:timeout]
-                set locktoken [$d createElement D:locktoken]
-                set locktokenhref [$d createElement D:href]
+                    $locktype appendChild [$d createElement D:[lindex $lockinfo 0]]
+                    $lockscope appendChild [$d createElement D:[lindex $lockinfo 1]]
+                    $depth appendChild [$d createTextNode [lindex $lockinfo 5]]
 
-                $locktype appendChild [$d createElement D:[lindex $lockinfo 0]]
-                $lockscope appendChild [$d createElement D:[lindex $lockinfo 1]]
-                $depth appendChild [$d createTextNode [lindex $lockinfo 5]]
+                    $timeout appendChild [$d createTextNode Second-$lock_timeout_left]
+                    $owner appendChild [$d createTextNode [lindex $lockinfo 2]]
+                    $locktokenhref appendChild [$d createTextNode [lindex $lockinfo 3]]
+                    $locktoken appendChild $locktokenhref
 
-                $timeout appendChild [$d createTextNode Second-$lock_timeout_left]
-                $owner appendChild [$d createTextNode [lindex $lockinfo 2]]
-                $locktokenhref appendChild [$d createTextNode [lindex $lockinfo 3]]
-                $locktoken appendChild $locktokenhref
+                    $activelock appendChild $locktype
+                    $activelock appendChild $lockscope
+                    $activelock appendChild $depth
+                    $activelock appendChild $timeout
+                    $activelock appendChild $owner
+                    $activelock appendChild $locktoken
 
-                $activelock appendChild $locktype
-                $activelock appendChild $lockscope
-                $activelock appendChild $depth
-                $activelock appendChild $timeout
-                $activelock appendChild $owner
-                $activelock appendChild $locktoken
-
-                $lockdiscovery appendChild $activelock
+                    $lockdiscovery appendChild $activelock
+                }
             }
+
+            $prop appendChild $lockdiscovery
+            $propstat appendChild $prop
+
+            set status [$d createElement D:status]
+            set status_code [expr {
+                                   [dict exists $props $i] ?
+                                   "HTTP/1.1 200 OK" : "HTTP/1.1 404 Not Found"
+                               }]
+            set status_text [$d createTextNode $status_code]
+
+            $status appendChild $status_text
+            $propstat appendChild $status
         }
-
-        $prop appendChild $lockdiscovery
-        $propstat appendChild $prop
-
-        set status [$d createElement D:status]
-        set status_text [$d createTextNode "HTTP/1.1 200 OK"]
-
-        $status appendChild $status_text
-        $propstat appendChild $status
-
 
     }
 
@@ -1636,8 +1640,8 @@ if {![nsv_exists tdav_filters_installed filters_installed]} {
 
     set tdav_shares [ns_configsection "ns/server/[ns_info server]/tdav/shares"]
     if { "" ne $tdav_shares } {
-        for {set i 0} {$i < [ns_set size $tdav_shares]} {incr i} {
-            set tdav_share [ns_configsection "ns/server/[ns_info server]/tdav/share/[ns_set key $tdav_shares $i]"]
+        foreach s [ns_set keys $tdav_shares] {
+            set tdav_share [ns_configsection "ns/server/[ns_info server]/tdav/share/$s"]
             tdav::apply_filters [ns_set get $tdav_share uri] [ns_set get $tdav_share options] [ns_set get $tdav_share enablefilesystem]
             # uncomment the next line if you are using ns_perm authentication
             # tdav::allow_group [ns_set get $tdav_share uri] tdav

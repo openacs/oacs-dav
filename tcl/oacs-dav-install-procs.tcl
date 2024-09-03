@@ -33,7 +33,7 @@ ad_proc -private oacs_dav::install::package_uninstall {} {
 # this is far from complete or even known to be going in the
 # right direction
 
-# somehow we need to get identication information from the
+# somehow we need to get identification information from the
 # user and send back status of permission allowed or denied
 
 # look at the DAV spec to get an idea of what inputs and
