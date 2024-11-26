@@ -780,11 +780,7 @@ proc tdav::filter_webdav_propfind {args} {
 
 proc tdav::filter_webdav_put {args} {
 
-    set fd [ad_opentmpfile tmpfile]
-    ns_writecontent $fd
-    close $fd
-
-    tdav::conn -set tmpfile $tmpfile
+    tdav::conn -set tmpfile [ns_getcontent -as_file 1 -binary 1]
 
     return filter_ok
 }
