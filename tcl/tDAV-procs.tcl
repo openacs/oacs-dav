@@ -131,7 +131,11 @@ proc tdav::read_xml {} {
 # Results:
 #     file written including contents of list
 
-proc tdav::dbm_write_list {uri list} {
+ad_proc -private ::tdav::dbm_write_list {uri list} {
+    Store a resource's WebDAV user properties as a persistent client property.
+    @param uri Resource URI.
+    @param list Alternating property keys and values.
+} {
     regsub {^/} $uri {} uri
     ad_set_client_property \
         -persistent t \
@@ -288,13 +292,22 @@ ad_proc -public ::tdav::copy_props {uri newuri} {
         oacs-dav $newuri $props
 }
 
-proc tdav::write_lock {uri list} {
+ad_proc -private ::tdav::write_lock {uri list} {
+    Write a resource's lock record to its lock file, replacing any prior record.
+    @param uri Resource URI.
+    @param list Lock record containing type, scope, owner, token, timeout,
+        depth, and creation time.
+} {
     set f [open [tdav::get_lock_file $uri] w]
     puts $f $list
     close $f
 }
 
-proc tdav::dbm_read_list {uri} {
+ad_proc -private ::tdav::dbm_read_list {uri} {
+    Read a resource's stored WebDAV user properties.
+    @param uri Resource URI.
+    @return A list of property key and value pairs, or an empty list if none are stored.
+} {
     regsub {^/} $uri {} uri
     return [ad_get_client_property \
                 -session_id 0 \
@@ -313,7 +326,12 @@ proc tdav::dbm_read_list {uri} {
 #     Returns the contents of the lock file. Contents will
 #     be evaluated before being returned.
 
-proc tdav::read_lock {uri} {
+ad_proc -private ::tdav::read_lock {uri} {
+    Read and decode a resource's lock record from its lock file.
+    Create an empty lock file if it is absent.
+    @param uri Resource URI.
+    @return Lock record as a list, or an empty list for an empty file.
+} {
     set f [open [tdav::get_lock_file $uri] {CREAT RDONLY}]
     set s [read $f]
     set e "list ${s}"
@@ -361,7 +379,12 @@ proc tdav::dbm_write_array {uri arr} {
 #    time lock was created in any format clock scan can accept
 #
 
-proc tdav::lock_timeout_left { timeout locktime } {
+ad_proc -private ::tdav::lock_timeout_left { timeout locktime } {
+    Calculate the remaining lifetime of a WebDAV lock.
+    @param timeout Lock lifetime in seconds.
+    @param locktime Lock creation time in a format accepted by clock scan.
+    @return Remaining seconds, or zero if the lock has expired.
+} {
     set locktime [clock scan $locktime]
     set lockexpiretime [clock scan "$timeout seconds" -base $locktime]
     set timeout_left [expr {$lockexpiretime - [clock seconds]}]
