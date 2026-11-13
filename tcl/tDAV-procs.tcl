@@ -181,7 +181,13 @@ regsub {^/} $uri {} uri
 # Results:
 #     Returns the filename containing the lock information for URI
 
-proc tdav::get_lock_file {uri} {
+ad_proc -public ::tdav::get_lock_file {uri} {
+    Return the path to the lock file for a resource, creating its parent
+    directory if needed. Use the configured lockdir or the default lockdir
+    next to the page root.
+    @param uri Resource URI.
+    @return Lock file path.
+} {
 # just in case.  I hate that 'file join' fails on this
 regsub {^/} $uri {} uri
 
@@ -212,7 +218,10 @@ regsub {^/} $uri {} uri
 # Results:
 #     File containing user properties for URI is deleted
 
-proc tdav::delete_props {uri} {
+ad_proc -public ::tdav::delete_props {uri} {
+    Clear the persistent user properties for a resource.
+    @param uri Resource URI.
+} {
     regsub {^/} $uri {} uri
     ad_set_client_property \
         -persistent t \
@@ -262,7 +271,11 @@ proc tdav::move_props {uri newuri} {
 #     under the properties directory to the relative
 #     location corresponding to newuri.
 
-proc tdav::copy_props {uri newuri} {
+ad_proc -public ::tdav::copy_props {uri newuri} {
+    Copy persistent user properties from one resource to another.
+    @param uri Source resource URI.
+    @param newuri Destination resource URI.
+} {
     regsub {^/} $uri {} uri
     regsub {^/} $newuri {} newuri
     set props [ad_get_client_property \
@@ -320,7 +333,10 @@ proc tdav::read_lock {uri} {
 # Results:
 #      Lock file for URI is deleted
 
-proc tdav::remove_lock {uri} {
+ad_proc -public ::tdav::remove_lock {uri} {
+    Delete the stored lock file for a resource.
+    @param uri Resource URI.
+} {
     file delete -- [tdav::get_lock_file $uri]
 }
 
@@ -373,7 +389,13 @@ proc tdav::lock_timeout_left { timeout locktime } {
 #     on URI. In this case the caller should return an HTTP
 #     status of 423 or otherwise treat the file as locked.
 
-proc tdav::check_lock {uri} {
+ad_proc -public ::tdav::check_lock {uri} {
+    Check whether the request may proceed under the resource's WebDAV lock.
+    Remove an expired lock. If an active lock has no matching token in the
+    If header, send HTTP 423.
+    @param uri Resource URI.
+    @return unlocked if the request may proceed, or filter_return after HTTP 423.
+} {
     regsub {^/} $uri {} uri
     # if lock exists, work.  if not, just return.
     if {[file exists [tdav::get_lock_file $uri]]} {
@@ -418,11 +440,15 @@ proc tdav::check_lock {uri} {
 #     uri URI of the request
 #
 # Results:
-#     If the client provided lock token matches the existing lock the
-#     lock is removed and "unlocked" is returned. Otherwise no action
-#     is taken on the lock and "filter_return" is returned.
+#     Return "unlocked" for a matching token or no stored lock,
+#     and "filter_return" for a missing or mismatched token.
 
-proc tdav::check_lock_for_unlock {uri} {
+ad_proc -public ::tdav::check_lock_for_unlock {uri} {
+    Check the Lock-Token header against the stored lock for an UNLOCK request.
+    @param uri Resource URI.
+    @return unlocked if the token matches or no lock exists, or filter_return
+        if the token is missing or does not match.
+} {
     regsub {^/} $uri {} uri
     # if lock exists, work.  if not, just return.
     if {[file exists [tdav::get_lock_file $uri]]} {
@@ -674,12 +700,24 @@ proc tdav::webdav_propfind {} {
 # Results:
 #     returns a list of name/value pairs
 
-proc tdav::get_user_props { uri depth prop_req } {
+ad_proc -public ::tdav::get_user_props { uri depth prop_req } {
+    Read all stored user properties for a resource.
+    @param uri Resource URI.
+    @param depth Requested traversal depth. Accepted but unused.
+    @param prop_req Requested property selection. Accepted but unused.
+    @return A list of property key and value pairs.
+} {
     regsub {^/} $uri {} luri
     return [tdav::dbm_read_list $luri]
 }
 
-proc tdav::update_user_props {uri prop_req} {
+ad_proc -public ::tdav::update_user_props {uri prop_req} {
+    Apply set and remove operations to a resource's stored user properties.
+    @param uri Resource URI.
+    @param prop_req Alternating action and property records. Each property
+        record contains a namespace/name key and a value.
+    @return A list of HTTP status and property key pairs.
+} {
     array set props [tdav::dbm_read_list $uri]
     set status [list]
     foreach {action i} $prop_req {
@@ -1087,7 +1125,17 @@ proc tdav::filter_webdav_lock {args} {
     return filter_ok
 }
 
-proc tdav::set_lock {uri depth type scope owner {timeout ""} {locktime ""} } {
+ad_proc -public ::tdav::set_lock {uri depth type scope owner {timeout ""} {locktime ""} } {
+    Create and store a WebDAV lock for a resource.
+    @param uri Resource URI.
+    @param depth Lock depth.
+    @param type Lock type.
+    @param scope Lock scope.
+    @param owner Lock owner.
+    @param timeout Lock lifetime. An empty value uses the configured default.
+    @param locktime Lock creation time. An empty value uses the current time.
+    @return The generated lock token.
+} {
     if {$timeout eq ""} {
         set timeout [ns_config "ns/server/[ns_info server]/tdav" "defaultlocktimeout" "300"]
     }
@@ -1187,7 +1235,12 @@ proc tdav::return_unauthorized { {realm ""} } {
 # so this will take what's returned and if necessary format an
 # XML response body
 
-proc tdav::respond { response } {
+ad_proc -public ::tdav::respond { response } {
+    Send a WebDAV response. Format the response for the current HTTP
+    method, with a plain text response for HTTP 423.
+    @param response List starting with the HTTP status code, followed by
+        method-specific response data.
+} {
     set response_code [lindex $response 0]
     if {"423" eq $response_code} {
         set response_body "The resource is locked"
@@ -1470,7 +1523,12 @@ proc tdav::respond::propfind { response } {
 
 }
 
-proc tdav::conn {args} {
+ad_proc -public ::tdav::conn {args} {
+    Read or write tDAV request state. A read falls back to ns_conn when
+    no tDAV value is set for the requested field.
+    @param args A field name, -get field, or -set field value.
+    @return The value read or stored.
+} {
     global tdav_conn
     set flag [lindex $args 0]
     if { [string index $flag 0] ne "-" } {
